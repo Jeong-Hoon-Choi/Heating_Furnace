@@ -1,0 +1,231 @@
+from preprocessing_pck.data_input import *
+from data_for_learning.data_handling_for_using_model import *
+import change_point.find_change_point as fc
+import press_matching_pck.press_matching as pm
+from constant.constant_data_make import *
+
+# ------------------------------ make data ---------------------------------
+def work_start():
+    TIME_MARGIN = 10
+    for num in work_:
+        data = []
+        change_point = []
+        end = []
+        data_path = ''
+        for t in os.listdir(base_path + 'input/' + str(num) + '/'):
+            path = base_path + 'input/' + str(num) + '/' + t
+            print(path)
+            get_data_excel(data, path, num)
+        h = HF()
+        fc.data_manipulates(data, data_path, num, time_path)
+        fc.find_all(data, change_point, num, TIME_MARGIN)
+        # print("find change_point done heating " + str(num))
+        plotting(data, change_point, fc.start_fix, fc.end_fix, num, fc.re, fc.start_real, fc.end_real)
+        # make_database(data, num, h)
+        # h.sett(df_mat, base_path + 'HF_OUT/test_2019_a_')
+        print('DB_Done')
+    plt.show()
+
+
+# 프레스기 매칭
+def work_press():
+    h_arr = []
+    p = pd.read_csv(base_path + 'data/' + work_space + 'press_par.csv', encoding='euc-kr', index_col=0)
+    for i in work_:
+        h = HF()
+        h.df.read_csv(base_path + 'HF_OUT/test_2019_a_' + str(i) + '.csv', encoding='euc-kr', index_col=0)
+        h.set_next_h()
+        h.change_list()
+        h_arr.append(h)
+    pm.matching_press_general(h_arr, p)
+    for i in h_arr:
+        i.out(base_path + 'HF_OUT/press_2019_1a_')
+
+
+# 구간 정리
+def work_set():
+    hh = HF()
+    df_t = pd.read_csv(base_path + 'data/start_end_re1.csv', encoding='euc-kr')
+    # for num in error_arr_2019:
+    for num in work_:
+        h = HF()
+        h.df.read_csv(base_path + 'HF_OUT/press_2019_1a_' + str(num) + '.csv', encoding='euc-kr', index_col=0)
+        # eliminate_error_loop(h, num[1])
+        h.match_time(df_t)
+        h.fill()
+        h.week()
+        hh.df = pd.concat([hh.df, h.df])
+        hh.df = hh.df.reset_index(drop=True)
+    eliminate_drop(hh)
+    hh.out(base_path + 'HF_OUT/last_2019_ffa')
+    print('phase 2')
+    hhh = ['heat', 'hold', 'open', 'reheat']
+    for i in hhh:
+        print(i)
+        h2 = HF()
+        for j, row in hh.df.iterrows():
+            if hh.df['Type'].loc[j] == i:
+                h2.df = h2.df.append(row)
+            else:
+                pass
+        h2.df = h2.df.reset_index(drop=True)
+        gum_2(h2)
+        h2.df.to_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_' + i + '.csv', encoding='euc-kr')
+    hh2 = HF()
+    hh2.df.read_csv(base_path + 'HF_OUT/last_2019_ffa' + str(work_[0]) + '.csv', encoding='euc-kr', index_col=0)
+    handle_first_hold(hh2, work_, base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_first_hold.csv')
+    hh2.out('./HF_OUT_3/last_2019_' + str(work_[0]) + '_drop_first_hold')
+
+
+# 가열구간 모델용 데이터 만들기
+def make_heat():
+    s_list, ss_list = sensitive('./data1_201909~201912/p15/sensitive.csv')
+    s_list_1, sn_list = sensitive2(base_path + 'data/SS.csv', base_path + 'data/S_N.csv', './data1_201909~201912/p15/sensitive.csv')
+    print(len(s_list), len(s_list_1), len(sn_list))
+    s_list = s_list + s_list_1
+    print(len(s_list))
+    df_mat_heat = pd.read_csv(base_path + 'data/heat_steel_par.csv', encoding='euc-kr')
+    HT_heat = HF()
+    HT_heat.df.read_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_heat.csv', encoding='euc-kr', index_col=0)
+    HT_heat.df = HT_heat.df.reset_index(drop=True)
+    HT_heat.change_list2()
+    # model_heat_kang(HT_heat, df_mat, './model/model_heat_0110.csv')
+    model_heat_kang_ver_heat(HT_heat, df_mat, df_mat_heat, s_list, ss_list, sn_list, base_path + '/model5/model_' + str(work_[0]) + '.csv')
+
+
+# 호기 분리
+def detach_furnace():
+    df_con = pd.DataFrame()
+    df_t = pd.read_csv(base_path + 'model5/model_' + str(work_[0]) + '.csv', encoding='euc-kr', index_col=0)
+    for num in work_:
+        df_t2 = pd.DataFrame(columns=df_t.columns)
+        for i, row in df_t.iterrows():
+            if int(df_t.loc[i, '가열로번호']) == num:
+                df_t2 = df_t2.append(row)
+        df_t2 = df_t2.reset_index(drop=True)
+        df_t2.to_csv(base_path + 'analysis/hogi5/' + str(num) + '.csv', encoding='euc-kr')
+        print('num :', len(df_t2.index))
+
+
+# 호기별 특성 csv 저장/그래프
+def furnace_characteristic():
+    arr_all = {'1': [], '2': [], '3': [], '4': [], '5': [], '6': [], '13': [], '17': [], '18': [], '19': [], '20': []}
+    num = 1
+    plt.rcParams["font.family"] = "Malgun Gothic"
+    fig = plt.figure()
+    label = '장입최대중량'
+    plt.title(label, position=(0.5, 1.0+0.05), fontsize=15)
+    for i in p_all:
+        arr_t = []
+        count_h = 0
+        count_s = 0
+        count_t_1 = 0
+        count_t_2 = 0
+        count_o = 0
+        count_A = 0
+        count_m = 0
+        count_A_1 = 0
+        count_A_2 = 0
+        df = pd.read_csv(base_path + 'analysis/hogi5/' + str(i) + '.csv', encoding='euc-kr', index_col=0)
+        for i2, row in df.iterrows():
+            flag_heat = 0
+            flag_sense = 0
+            flag_open = 0
+            flag_m = 0
+            arr_t.append(int(df.loc[i2, label]))
+            if int(df.loc[i2, '열괴장입소재개수']) > 0:
+                count_h += 1
+                flag_heat = 1
+            if int(df.loc[i2, '문열림횟수']) > 0:
+                count_o += 1
+                flag_open = 1
+            if int(df.loc[i2, '민감소재장입개수']) > 0:
+                count_s += 1
+                flag_sense = 1
+            if int(df.loc[i2, '민감여부']) == 1:
+                count_m += 1
+                flag_m = 1
+            if flag_heat == 0 and flag_sense == 1 and flag_open == 0 and flag_m == 0 and int(df.loc[i2, '시간(총)']) <= 3600:
+                count_t_1 += 1
+            if flag_heat == 0 and flag_sense == 0 and flag_open == 0 and flag_m == 0 and int(df.loc[i2, '시간(총)']) <= 3600:
+                count_t_2 += 1
+            if flag_heat == 1 or flag_open == 1 or flag_m == 1:
+                count_A += 1
+            if flag_heat == 0 and flag_open == 0 and flag_m == 0 and flag_sense == 1:
+                count_A_1 += 1
+            if flag_heat == 0 and flag_open == 0 and flag_m == 0 and flag_sense == 0:
+                count_A_2 += 1
+        arr_all[str(i)].append(len(arr_t))
+        arr_all[str(i)].append(count_h)
+        arr_all[str(i)].append(count_o)
+        arr_all[str(i)].append(count_m)
+        arr_all[str(i)].append(count_A)
+        arr_all[str(i)].append(count_s)
+        arr_all[str(i)].append(count_A_1)
+        arr_all[str(i)].append(count_t_1)
+        arr_all[str(i)].append(count_A_2)
+        arr_all[str(i)].append(count_t_2)
+        arr_all[str(i)].append(np.mean(arr_t))
+        arr_all[str(i)].append(np.var(arr_t))
+        arr_all[str(i)].append(np.std(arr_t))
+        ax = fig.add_subplot(1, 11, num)
+        ax.axhline(y=np.mean(arr_t), color='red', linewidth=3.0)
+        plt.ylim([0, 180000])
+        # plt.ylim([0, 300000])
+        ax.plot(arr_t, '.')
+        ax.set_title(i)
+        num += 1
+    df = pd.DataFrame.from_dict(arr_all)
+    df = df.reset_index(drop=True)
+    df.to_csv(base_path + 'analysis/analysis_0421.csv', encoding='euc-kr')
+    # plt.show()
+
+
+# 호기 또는 클러스터별 시간-에너지 그래프
+def plot_time_energy():
+    plt.rcParams["font.family"] = "Malgun Gothic"
+    for i in p_bum:
+        arr_gas = []
+        arr_time = []
+        df = pd.read_csv(base_path + 'analysis/hogi/' + str(i[0]) + '_filtered.csv', encoding='euc-kr', index_col=0)
+        for i2, row in df.iterrows():
+            arr_gas.append(float(df.loc[i2, '에너지']))
+            arr_time.append(int(df.loc[i2, i[1]]))
+        plt.figure()
+        plt.xlim([0, 250000])
+        plt.ylim([0, 8000])
+        plt.plot(arr_time, arr_gas, '.')
+        plt.title(str(i[0]) + ' 시간 - 에너지', position=(0.5, 1.0+0.05), fontsize=15)
+    plt.show()
+
+
+# 사이클 필터링
+def furnace_clustering():
+    df = pd.read_csv(base_path + 'model5/model_1.csv', encoding='euc-kr', index_col=0)
+    for i in p_bum:
+        arr_t = []
+        # df = pd.read_csv(base_path + 'analysis/hogi/' + str(i) + '.csv', encoding='euc-kr', index_col=0)
+        df_t = pd.DataFrame(columns=df.columns)
+        for i2, row in df.iterrows():
+            heat_flag = 0
+            sense_flag = 0
+            time_flag = 0
+            flag_m = 0
+            if int(df.loc[i2, '가열로번호']) in i:
+                if int(df.loc[i2, '열괴장입소재개수']) > 0 or int(df.loc[i2, '문열림횟수']) > 0:
+                    heat_flag = 1
+                if int(df.loc[i2, '민감소재장입개수']) > 0:
+                    sense_flag = 1
+                if int(df.loc[i2, '민감여부']) == 1:
+                    flag_m = 1
+                if int(df.loc[i2, '시간(총)']) <= 3600:
+                    time_flag = 1
+                if heat_flag == 0 and flag_m == 0 and time_flag == 0 and sense_flag == 1:
+                    df_t = df_t.append(row)
+        df_t = df_t.reset_index(drop=True)
+        # df_t.to_csv(base_path + 'analysis/hogi/' + str(i) + '_filtered.csv', encoding='euc-kr')
+        print(len(df_t.index))
+        df_t.to_csv(base_path + 'analysis/for_learning5/민감만/1h제외/' + str(i) + '.csv', encoding='euc-kr')
+
+
+# ------------------------------ learning ---------------------------------
