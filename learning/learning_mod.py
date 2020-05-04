@@ -42,7 +42,7 @@ def KNN_reg(train_feature, train_label, test_feature, test_label):
 def MLP(train_feature, train_label, test_feature, test_label, epoch=2000, unit=30, hidden=5, s=None, s3=0):
     print(len(train_feature), len(test_feature), len(train_label), len(test_label))
 
-    model_F = FFN(train_feature.shape[1], train_feature, train_label, test_feature, test_label, epoch, unit, hidden, s, s3=s3)
+    model_F = FFN(train_feature.shape[1], train_feature, train_label, test_feature, test_label, epoch, unit, hidden, s, check_seed=s3)
     score, test_pred, m = model_F.run()
     train_pred = m.predict(x=train_feature)
     return score, test_pred, train_pred, m
@@ -115,26 +115,9 @@ def data_manipulate_pca(origin, label, list_feature, k=42):
 
 
 # data train-test split, normalizing
-def data_manipulate_normal3(origin, label, list_feature1, list_feature2=None, k=42, mode=None):
+def data_manipulate_normal3(x, y, label, list_feature1, list_feature2=None, seed=42, mode=None):
     list_label = [label]
     # print(list_feature1 + list_feature2)
-
-    # leave one out on/off
-    # Don't use leave one out
-    if mode is None:
-        x, y = train_test_split(origin, test_size=0.3, random_state=k)
-    # using leave one out
-    else:
-        temp_x = pd.DataFrame()
-        temp_y = pd.DataFrame()
-        for k, row in origin.iterrows():
-            if k == mode:
-                temp_y = temp_y.append(row)
-            else:
-                temp_x = temp_x.append(row)
-                temp_x = temp_x.reset_index(drop=True)
-        x = temp_x
-        y = temp_y
     # if all features are needed normalizing
     if list_feature2 is None:
         print(list_feature1)
@@ -198,4 +181,49 @@ def data_manipulate_normal3(origin, label, list_feature1, list_feature2=None, k=
         x_feature = x_feature.reset_index(drop=True)
         y_feature = y_feature.append(pd.DataFrame(data=y_feature3, columns=y_feature.columns))
         y_feature = y_feature.reset_index(drop=True)
-    return x_feature, x_label, y_feature, y_label, x, y
+    return x_feature, x_label, y_feature, y_label
+
+
+def Train_Test_split(origin, seed=42, mode=None):
+    # leave one out on/off
+    # Don't use leave one out
+    if mode is None:
+        x, y = train_test_split(origin, test_size=0.3, random_state=seed)
+    # using leave one out
+    else:
+        temp_x = pd.DataFrame()
+        temp_y = pd.DataFrame()
+        for k, row in origin.iterrows():
+            if k == mode:
+                temp_y = temp_y.append(row)
+            else:
+                temp_x = temp_x.append(row)
+                temp_x = temp_x.reset_index(drop=True)
+        x = temp_x
+        y = temp_y
+    return x, y
+
+
+def add_prediction_to_normalized_data(test_pred, train_pred, f_list, x, y, train_path, test_path):
+    for j in f_list:
+        label = j[0]
+        x.loc[:, label + '_pred'] = ''
+        x.loc[:, label + '_mape'] = ''
+        x = x.reset_index(drop=True)
+        for k in range(len(x.index)):
+            # x[j[2] + 'knn_pred'].loc[k] = knn_train_pred[k][0]
+            e = x[label].loc[k]
+            ee = train_pred[label][k][0]
+            x[label + '_pred'].loc[k] = ee
+            x[label + '_mape'].loc[k] = abs(e - ee) / e * 100
+        y.loc[:, label + '_pred'] = ''
+        y.loc[:, label + '_mape'] = ''
+        y = y.reset_index(drop=True)
+        for k in range(len(y.index)):
+            # y[j[2] + 'knn_pred'].loc[k] = knn_test_pred[k][0]
+            e = y[label].loc[k]
+            ee = test_pred[label][k][0]
+            y[label + '_pred'].loc[k] = ee
+            y[label + '_mape'].loc[k] = abs(e - ee) / e * 100
+    x.to_csv(train_path, encoding='euc-kr')
+    y.to_csv(test_path, encoding='euc-kr')

@@ -7,7 +7,7 @@ from tensorflow.keras.models import load_model
 import matplotlib.pyplot as plt
 
 class FFN:
-    def __init__(self, input_shape, train_feature, train_label, test_feature, test_label, epochs=2000, unit=30, hidden=5, s=None, s2=None, s3=0):
+    def __init__(self, input_shape, train_feature, train_label, test_feature, test_label, epochs=2000, unit=30, hidden=5, save_path=None, load_path=None, check_seed=None):
         self.input_shape = input_shape
         self.train_feature = train_feature
         self.train_label = train_label
@@ -16,14 +16,14 @@ class FFN:
         self.epochs = epochs
         self.unit = unit
         self.hidden = hidden
-        self.s = s
-        self.s2 = s2
-        self.s3 = s3
+        self.save_path = save_path
+        self.load_path = load_path
+        self.check_seed = check_seed
         # self.fold = fold
 
     # model load
     def load(self):
-        model = load_model(self.s2)
+        model = load_model(self.load_path)
         # score = model.evaluate(self.test_feature, self.test_label)
         pred = model.predict(x=self.test_feature)
 
@@ -31,12 +31,13 @@ class FFN:
 
     def run(self):
         model = self.init_model()
-        '''
-        checkpoint = tf.keras.callbacks.ModelCheckpoint("./check/model checkpoint epoch2_" + str(self.s3) + "_{epoch:02d}.h5", monitor='loss',
-                                                        period=100)
-        csv_logger = tf.keras.callbacks.CSVLogger('./2_model_history.csv')
-        callbacks = [csv_logger, checkpoint]
-        '''
+
+        if self.check_seed is not None:
+            checkpoint = tf.keras.callbacks.ModelCheckpoint("./check/model checkpoint epoch2_" + str(self.check_seed) + "_{epoch:02d}.h5", monitor='loss',
+                                                            period=100)
+            csv_logger = tf.keras.callbacks.CSVLogger('./2_model_history.csv')
+            callbacks = [csv_logger, checkpoint]
+
         history = model.fit(self.train_feature, self.train_label,
                   batch_size=np.size(a=self.train_feature, axis=0),
                   epochs=self.epochs)
@@ -52,12 +53,11 @@ class FFN:
         # plt.legend(['Train', 'Test'], loc='upper left')
         # plt.show()
 
-
-        # train
-        if self.s is not None:
-            tf.keras.models.save_model(model=model, filepath='model_' + self.s + '.h5')
+        # save
+        if self.save_path is not None:
+            tf.keras.models.save_model(model=model, filepath='model_' + self.save_path + '.h5')
             model_json = model.to_json()
-            with open("model_" + self.s + ".json", 'w') as json_file:
+            with open("model_" + self.save_path + ".json", 'w') as json_file:
                 json_file.write(model_json)
         return score, y_pred, model
 

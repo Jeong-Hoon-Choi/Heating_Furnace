@@ -2,7 +2,9 @@ from preprocessing_pck.data_input import *
 from data_for_learning.data_handling_for_using_model import *
 import change_point.find_change_point as fc
 import press_matching_pck.press_matching as pm
+from learning.learning_mod import *
 from constant.constant_data_make import *
+
 
 # ------------------------------ make data ---------------------------------
 def work_start():
@@ -229,3 +231,97 @@ def furnace_clustering():
 
 
 # ------------------------------ learning ---------------------------------
+def HF_heating_module():
+    epoch = 2000
+    seed_start = 10
+    seed_end = 10
+    for i2 in path_1:
+        print(i2)
+        for i in [p_bum[4]]:
+            df_origin = pd.read_csv('./heating_furnace/heat/data0330/data5/' + str(i2[0]) + '/' + str(i) + '.csv', encoding='euc-kr', index_col=0)
+            print(i2, i, '개수', len(df_origin.index))
+            df_new = pd.DataFrame()
+            for seed1 in range(seed_start, seed_end):
+                test_pred = {'시간(총)': '', '시간(0제외)': '', '에너지': '', '시간(총)_mape': '', '시간(0제외)_mape': '', '에너지_mape': ''}
+                train_pred = {'시간(총)': '', '시간(0제외)': '', '에너지': '',  '시간(총)_mape': '', '시간(0제외)_mape': '', '에너지_mape': ''}
+                x, y = Train_Test_split(df_origin, seed1)
+                for j2 in feature_list_0325:
+                    for j in j2:
+                        out = []
+                        out2 = []
+                        train_feature, train_label, test_feature, test_label = \
+                            data_manipulate_normal3(x, y, j[0], j[1], j[2], seed1)
+                            # data_manipulate_no_split(df_origin, j[0], j[1])
+                            # data_manipulate_pca(origin2, j[0], j[1], seed1)
+                        count = 0
+                        print(train_feature)
+                        train_label = train_label.reset_index(drop=True)
+                        test_label = test_label.reset_index(drop=True)
+
+                        # KNN
+                        knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature, train_label, test_feature, test_label)
+                        out2.append(mean_absolute_percentage_error(test_label, knn_test_pred))
+
+                        # MLP
+                        for hidden, unit in [[5, 5]]:
+                            print('seed : ', seed1, 'epoch : ', epoch, 'unit : ', unit, 'hidden : ', hidden)
+                            s1, mlp_test_pred, mlp_train_pred, model = MLP(train_feature, train_label, test_feature, test_label, epoch=epoch, unit=unit, hidden=hidden)
+                            train_pred[j[0]] = mlp_train_pred
+                            test_pred[j[0]] = mlp_test_pred
+                            out.append(s1)
+                            df_new.loc[seed1 - seed_start, j[3] + '_MLP_' + str(hidden) + '_' + str(unit) + '_' + j[0]] = out[len(out) - 1]
+
+                        df_new.loc[seed1 - seed_start, j[3] + '_KNN_' + str(hidden) + '_' + str(unit) + '_' + j[0]] = out2[len(out2) - 1]
+
+                        # df_new.loc[seed1 - 10, j[3] + '_MLP_' + j[0]] = out[len(out) - 1]
+                        # df_new.loc[seed1 - 10, j[3] + '_KNN_' + j[0]] = out2[len(out2) - 1]
+
+
+                        # 랜덤 포레스트
+                        # random_forest(train_feature, train_label, test_feature, test_label, j[0])
+
+                        # 모든 data를 train set으로 했을 때의 prediction
+                        '''
+                        df_origin.loc[:, j[0] + '_pred'] = ''
+                        df_origin.loc[:, j[0] + '_mape'] = ''
+                        df_origin = df_origin.reset_index(drop=True)
+                        for k in range(len(df_origin.index)):
+                            # x[j[2] + 'knn_pred'].loc[k] = knn_train_pred[k][0]
+                            e = df_origin[j[0]].loc[k]
+                            ee = train_pred[j[0]][k][0]
+                            df_origin[j[0] + '_pred'].loc[k] = ee
+                            df_origin[j[0] + '_mape'].loc[k] = abs(e - ee) / e * 100
+                            '''
+
+                        # learning with loaded model(FFN)
+                        '''
+                        arrrr = []
+                        epochh = []
+                        for k in range(100, epoch+1, 100):
+                            model_F = FFN(train_feature.shape[1], train_feature, train_label, test_feature, test_label,
+                                          load_path='./check/model checkpoint epoch2_' + str(seed) + '_' + str(k) + '.h5')
+                            print(k)
+                            re = model_F.load()
+                            epochh.append(k)
+                            arrrr.append(re)
+                        plt.plot(epochh, arrrr)
+                        plt.title(str(seed))
+                        '''
+                    # add prediction to normalized data (FFN)
+                    '''
+                    train_path = './heating_furnace/heat/data0330/check/' + str(i2) + '/' + str(i) + '/train/' + j[3] + '/' + str(seed1) + '.csv'
+                    test_path = './heating_furnace/heat/data0330/check/' + str(i2) + '/' + str(i) + '/test/' + j[3] + '/' + str(seed1) + '.csv'
+                    add_prediction_to_normalized_data(test_pred, train_pred, j2, x, y, train_path, test_path)
+                '''
+
+            # save_result
+            # df_new = df_new.transpose()
+            for i0 in df_new.columns:
+                print(i0)
+                arr_avg = []
+                for i01, ro2 in df_new.iterrows():
+                    if not pd.isna(df_new.loc[i01, i0]):
+                        arr_avg.append(float(df_new.loc[i01, i0]))
+                print(arr_avg)
+                df_new.loc[seed_end - seed_start - 1, i0] = np.average(arr_avg)
+            df_new.to_csv('./heating_furnace/heat/data0330/result0420_1/' + str(i2[0]) + '/result_' + str(i) + '1.csv', encoding='euc-kr')
