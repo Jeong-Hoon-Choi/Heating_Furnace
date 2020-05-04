@@ -1,5 +1,6 @@
 from change_point.while_heating import *
 from change_point.after_heating import *
+from change_point.change_point_calulate import *
 
 
 # change point detection algorithm
@@ -30,14 +31,13 @@ def find_all(data, change_point, num, TIME_MARGIN):
     global start_real
     global end_real
     global end_fix
-    # temp_array = [0, 0, None, 0, 0, 0, 0, 0]
     # flag_past, flag_now, temp_grey, temp_yellow, temp_low, flag_open, temp_open
     # 시작상태 세팅
     flag_status, flag_s_1, temp_s = initialize_status(data[0]['TIME'], start_real[0], flag_status, flag_s_1, temp_s)
     if num == 5 or num == 6:
-        thr_end = 1220
+        thr_heat_end = 1220
     else:
-        thr_end = 1140
+        thr_heat_end = 1140
     for i in range(TIME_MARGIN):
         change_point.append(None)
     for i in range(TIME_MARGIN, len(data) - TIME_MARGIN):
@@ -51,7 +51,7 @@ def find_all(data, change_point, num, TIME_MARGIN):
             save_time, cycle_status, num_of_door_open, close_while_heat, save_end, temp_s_time = \
                 before_work(WINDOW_DATA, i, current, change_point, count_0_gas, temp_low, temp_s, flag_start, flag_s_1,
                             flag_s_2, flag_status, save_temp, save_time, num, cycle_status,
-                            TIME_MARGIN, p, f, num_of_door_open, close_while_heat, save_end, temp_s_time, thr_end)
+                            TIME_MARGIN, p, f, num_of_door_open, close_while_heat, save_end, temp_s_time, thr_heat_end)
             if flag_status == 1:
                 differential_arr = make_check_parameter(int(TIME_MARGIN / 2), WINDOW_DATA, current, p, f)
                 close = 0

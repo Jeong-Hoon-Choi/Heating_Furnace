@@ -105,7 +105,7 @@ def detach_furnace():
             if int(df_t.loc[i, '가열로번호']) == num:
                 df_t2 = df_t2.append(row)
         df_t2 = df_t2.reset_index(drop=True)
-        df_t2.to_csv(base_path + 'analysis/hogi5/' + str(num) + '.csv', encoding='euc-kr')
+        df_t2.to_csv(base_path + 'analysis/furnace_num/' + str(num) + '.csv', encoding='euc-kr')
         print('num :', len(df_t2.index))
 
 
@@ -201,7 +201,7 @@ def plot_time_energy():
     plt.show()
 
 
-# 사이클 필터링
+# clustering
 def furnace_clustering():
     df = pd.read_csv(base_path + 'model5/model_1.csv', encoding='euc-kr', index_col=0)
     for i in p_bum:

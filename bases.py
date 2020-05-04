@@ -298,6 +298,34 @@ def wrong_st_ed(s, work):
     df_temp.to_csv(s + '_re1.csv', encoding='euc-kr')
 
 
+# 시작시간 - 종료시간 read
+def st_end_all(num, start_arr, end_arr, time):
+    flag = 0
+    df_st_end_sig = pd.read_csv(time, encoding='euc-kr')
+    df_st_end_sig = df_st_end_sig.fillna(0)
+    # print('가열로' + str(num) + '호기')
+    for i in range(len(df_st_end_sig.index)):
+        if df_st_end_sig['가열로명'].loc[i] == '가열로' + str(num) + '호기':
+            # print(i, df_st_end_sig['가열시작일시'].loc[i], df_st_end_sig['가열종료일시'].loc[i])
+            if df_st_end_sig['가열시작일시'].loc[i] != 0 and df_st_end_sig['가열종료일시'].loc[i] != 0:
+                start = dt.datetime.strptime(df_st_end_sig['가열시작일시'].loc[i], "%Y-%m-%d %H:%M")
+                end = dt.datetime.strptime(df_st_end_sig['가열종료일시'].loc[i], "%Y-%m-%d %H:%M")
+                for s in start_arr:
+                    if start == s:
+                        flag = 1
+                        print(start)
+                if flag == 0:
+                    start_arr.append(start)
+                flag = 0
+                for e in end_arr:
+                    if end == e:
+                        flag = 1
+                        print(end)
+                if flag == 0:
+                    end_arr.append(end)
+                flag = 0
+
+
 # Reinforcement
 def reinforce(data):
     flag = 0

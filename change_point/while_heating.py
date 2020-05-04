@@ -3,7 +3,7 @@ from change_point.change_point_calulate import *
 
 def before_work(WINDOW_DATA, i, current, change_point, count_0_gas, temp_low, temp_s, flag_start,
                 flag_s_1, flag_s_2, flag_status, save_temp, save_time, num, cycle_status,
-                TIME_MARGIN, p, f, num_of_door_open, close_while_heat, save_end, temp_s_time, thr_end):
+                TIME_MARGIN, p, f, num_of_door_open, close_while_heat, save_end, temp_s_time, thr_heat_end):
     past_data = []
     future_data = []
     global temp_array
@@ -74,7 +74,7 @@ def before_work(WINDOW_DATA, i, current, change_point, count_0_gas, temp_low, te
                 flag_s_1 = 0
                 flag_s_2 = 0
                 count_0_gas = 0
-        if float(WINDOW_DATA[current]['TEMPERATURE']) > thr_end:
+        if float(WINDOW_DATA[current]['TEMPERATURE']) > thr_heat_end:
             for j in range(10):
                 past_data.append(float(WINDOW_DATA[current + 1 + j]['TEMPERATURE']))
                 future_data.append(float(WINDOW_DATA[current - 10 + j]['TEMPERATURE']))
@@ -277,7 +277,6 @@ def module_door_open_while_heat(WINDOW_DATA, current, cycle_status, close_while_
 def module_door_close_while_heat(WINDOW_DATA, current, change_point, i, thr, cycle_status, num_of_door_open, close_while_heat):
     global temp_array
     global close
-    global op_en
     global end_real
     # 문닫힘 갱신
     if (temp_array[0] == 4 or temp_array[0] == 6) and (temp_array[1] == 4 or temp_array[1] == 6):
