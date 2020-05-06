@@ -1,6 +1,6 @@
 from preprocessing_pck.data_input import *
 from data_for_learning.data_handling_for_using_model import *
-import change_point.find_change_point as fc
+import change_point.find_change_point_2 as fc
 import press_matching_pck.press_matching as pm
 from learning.learning_mod import *
 from constant.constant_data_make import *

@@ -2,13 +2,17 @@ from bases import *
 
 # current_state, after_state, door_open_estimate, door_open_estimate2
 # door_close_estimate, flag_door_open, min_door_close, door_opening_timing
+find_change_point_dict = {'before_state': None, 'after_state': None, 'door_open_estimate': None,
+                          'door_open_save': None, 'door_close_estimate': None, 'door_open': None,
+                          'door_close_save': None, 'door_open_candidate': None}
 temp_array = [0, 0, None, 0, 0, 0, 0, 0]
-start_fix = []
-end_fix = []
+start_fix_list = []
+end_fix_list = []
 op_en = []
 hold = []
 heat = []
 flag_ready = 0
+wait_first_open = True
 start = 0
 close = 0
 end_real = []
