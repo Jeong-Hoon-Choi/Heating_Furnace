@@ -49,11 +49,10 @@ def initialize_all():
 
 
 # Data input,reinforcement, smoothing
-def data_manipulates(data, s, num, time):
+def data_manipulates(data, num, time):
     global end_real
     global start_real
     initialize_all()
-    # get_data(data, s)
     reinforce(data)
     st_end_all(num, start_real, end_real, time)
     print(len(start_real), start_real)

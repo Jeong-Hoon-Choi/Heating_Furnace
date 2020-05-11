@@ -13,13 +13,12 @@ def work_start():
         data = []
         change_point = []
         end = []
-        data_path = ''
         for t in os.listdir(base_path + 'input/' + str(num) + '/'):
             path = base_path + 'input/' + str(num) + '/' + t
             print(path)
             get_data_excel(data, path, num)
         h = HF()
-        fc.data_manipulates(data, data_path, num, time_path)
+        fc.data_manipulates(data, num, time_path)
         fc.find_all(data, change_point, num, TIME_MARGIN)
         # print("find change_point done heating " + str(num))
         plotting(data, change_point, fc.start_fix, fc.end_fix, num, fc.re, fc.start_real, fc.end_real)
