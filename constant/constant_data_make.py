@@ -9,6 +9,7 @@ p_bum = [[1], [2, 3, 4, 5, 6], [17, 18, 19, 20], [2, 3], [4, 5, 6]]
 
 TIME_MARGIN = 10
 HALF_MARGIN = 5
+GAS_CONDITION_WINDOW = 3
 
 # work_ = [19]
 work_ = p_all

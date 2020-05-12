@@ -299,7 +299,9 @@ def wrong_st_ed(s, work):
 
 
 # 시작시간 - 종료시간 read
-def st_end_all(num, start_arr, end_arr, time):
+def st_end_all(num, time):
+    start_arr = []
+    end_arr = []
     flag = 0
     df_st_end_sig = pd.read_csv(time, encoding='euc-kr')
     df_st_end_sig = df_st_end_sig.fillna(0)
@@ -324,6 +326,7 @@ def st_end_all(num, start_arr, end_arr, time):
                 if flag == 0:
                     end_arr.append(end)
                 flag = 0
+    return start_arr, end_arr
 
 
 # Reinforcement

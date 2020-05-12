@@ -4,28 +4,29 @@ import change_point.find_change_point_2 as fc
 import press_matching_pck.press_matching as pm
 from learning.learning_mod import *
 from constant.constant_data_make import *
+from bases import plotting
+import matplotlib.pyplot as plt
 
 
 # ------------------------------ make data ---------------------------------
 def work_start():
-    TIME_MARGIN = 10
     for num in work_:
         data = []
         change_point = []
-        end = []
         for t in os.listdir(base_path + 'input/' + str(num) + '/'):
             path = base_path + 'input/' + str(num) + '/' + t
             print(path)
             get_data_excel(data, path, num)
         h = HF()
-        fc.data_manipulates(data, num, time_path)
-        fc.find_all(data, change_point, num, TIME_MARGIN)
+        start_real, end_real = fc.data_manipulates(data, num, time_path)
+        time_dict, phase_list_dict = fc.find_all(data, change_point, num, start_real, end_real)
         # print("find change_point done heating " + str(num))
-        plotting(data, change_point, fc.start_fix, fc.end_fix, num, fc.re, fc.start_real, fc.end_real)
+        plotting(data, change_point, time_dict['fixed_start_time_list'], time_dict['fixed_end_time_list'], num,
+                 time_dict['heat_ended_time_list'], time_dict['real_start_time_list'], time_dict['real_end_time_list'])
         # make_database(data, num, h)
         # h.sett(df_mat, base_path + 'HF_OUT/test_2019_a_')
         print('DB_Done')
-    plt.show()
+        plt.show()
 
 
 # 프레스기 매칭

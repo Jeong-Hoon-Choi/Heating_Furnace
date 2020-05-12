@@ -1,12 +1,11 @@
 from bases import *
-from change_point import find_change_point as fc
 
 
 # make furnace's data
-def make_database(data, num, h):
-    op_en = fc.op_en
-    heat = fc.heat
-    hold = fc.hold
+def make_database(data, num, h, phase_list_dict):
+    op_en = phase_list_dict['open']
+    heat = phase_list_dict['heat']
+    hold = phase_list_dict['hold']
     # df = pd.DataFrame(columns=['가열로 번호', '시작시간', '종료시간', '가스사용량', 'Type'])
     # heat
     for i in range(len(heat)):

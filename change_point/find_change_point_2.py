@@ -1,10 +1,11 @@
 from bases import *
 from constant.constant_data_make import *
 
+
 # Data input,reinforcement, smoothing
-def data_manipulates(data, num, time, start_real, end_real):
+def data_manipulates(data, num, time):
     reinforce(data)
-    st_end_all(num, start_real, end_real, time)
+    start_real, end_real = st_end_all(num, time)
     print(len(start_real), start_real)
     print(len(end_real), end_real)
     return start_real, end_real
@@ -12,50 +13,30 @@ def data_manipulates(data, num, time, start_real, end_real):
 
 # change point detection algorithm
 def find_all(data, change_point, num, start_real, end_real):
-    p = []
-    f = []
 
-    heat_start_index = None
-    door_close_index = 0
-    work_end_index = 0
-    time_dict = {'real_start_time_list': [], 'real_end_time_list': [],
-                 'fixed_end_time_list': [], 'fixed_start_time_list': [] ,'heat_ended_time_list': []}
+    # dict of each time list
+    time_dict = {'real_start_time_list': start_real, 'real_end_time_list': end_real,
+                 'fixed_end_time_list': [], 'fixed_start_time_list': [], 'heat_ended_time_list': []}
 
-    heat_index_list = []
-    hold_index_list = []
-    open_close_reheat_list = []
+    # dict of each phases list of start/end index pairs
+    phase_list_dict = {'heat': [], 'hold': [], 'open': []}
 
+    #
     find_change_point_dict = {'before_state': None, 'after_state': None, 'door_open_estimate': None,
                               'door_open_save': None, 'door_close_estimate': None, 'door_open': None,
-                              'door_close_save': None, 'door_open_candidate': None}
+                              'door_close_save': None, 'reheat_end_candidate': None, 'door_close': None}
 
-    heating_phase_dict = {}
+    #
+    heating_parameter_dict = {'heat_start_index': None, 'heat_end_index': None, 'real_heat_start_index': None,
+                              'heat_start_temperature': None, 'heat_start_time': None, 'is_heat_start': False,
+                              'gas_condition': False, 'time_condition': False, 'count_0_gas': 0, 'num_of_door_open': 0,
+                              'last_work_end_time': None, 'wait_until_door_open_after_heating': False}
 
-    # list of index pair of phases
-    open_phase_list = []
-    hold_phase_list = []
-    heat_phase_list = []
+    #
+    status_dict = {'furnace': 'initial', 'cycle': 'initial'}
 
-    # flags
-    wait_until_door_open_after_heating = False
-
-    # status of Heating Furnace/work cycle
-    furnace_status = 'initial'
-    cycle_status = 'initial'
-
-    temp_low = None
-    heat_start = False
-    flag_s_1 = 0
-    flag_s_2 = 0
-    count_0_gas = 0
-    save_temp = 0
-    save_time = 0
-    save_end = 0
-
-    num_of_door_open = 0
-    close_while_heat = None
     # 시작상태 세팅
-    furnace_status, flag_s_1, heat_start_index = initialize_status(data[0]['TIME'], start_real[0])
+    initialize_status(data[0]['TIME'], time_dict['real_start_time_list'][0], heating_parameter_dict, status_dict)
     if num == 5 or num == 6:
         thr_end = 1220
     else:
@@ -68,506 +49,359 @@ def find_all(data, change_point, num, start_real, end_real):
         # if i == 10: print(len(WINDOW_DATA), current)
         change_point.append(None)
         # 가동종료 - 가열완료 사이클
-        if furnace_status == 'wait_for_heating':
-            furnace_status, heat_start, flag_s_1, flag_s_2, count_0_gas, heat_start_index, temp_low, save_temp, \
-            save_time, cycle_status, num_of_door_open, close_while_heat, save_end = \
-                before_work(WINDOW_DATA, i, current, change_point, count_0_gas, temp_low, heat_start_index, heat_start, flag_s_1,
-                            flag_s_2, furnace_status, save_temp, save_time, num, cycle_status,
-                            num_of_door_open, close_while_heat, save_end, thr_end)
-            if furnace_status == 'after_heating_to_end':
+        if status_dict['furnace'] == 'wait_for_heating':
+            before_work(WINDOW_DATA, i, current, num, change_point, heating_parameter_dict, status_dict, find_change_point_dict, time_dict, phase_list_dict, thr_end)
+            if status_dict['furnace'] == 'after_heating_to_end':
                 differential_arr = get_diff(WINDOW_DATA, current)
                 door_close_index = None
 
         # 가열완료 - 가동종료 사이클
-        elif furnace_status == 'after_heating_to_end':
+        elif status_dict['furnace'] == 'after_heating_to_end':
             differential_arr = get_diff(WINDOW_DATA, current)
-            if check_end(WINDOW_DATA[current]['TIME'], time_dict['real_end_time_list']):
-                flag_s_1, heat_start_index, door_close_index, furnace_status = work_end(WINDOW_DATA, current, find_change_point_dict, hold_phase_list, fixed_end_time_list, real_start_time_list, change_point, i, flag_s_1, heat_start_index, door_close_index)
+            print(WINDOW_DATA[current]['TIME'])
+            print(find_change_point_dict)
+            if is_work_end(WINDOW_DATA, current, time_dict):
+                work_end(WINDOW_DATA, current, time_dict, phase_list_dict, find_change_point_dict, heating_parameter_dict, status_dict, change_point, i)
             if is_this_point_can_be_a_change_point(differential_arr[0], differential_arr[1]):
-                cycle_status = point_detection(WINDOW_DATA, current, change_point, differential_arr[0],
-                                               differential_arr[1], num, i, cycle_status)
+                point_detection(WINDOW_DATA, current, change_point, differential_arr[0], differential_arr[1], num, i,
+                                time_dict, status_dict, heating_parameter_dict, find_change_point_dict, phase_list_dict)
             elif is_this_point_can_be_a_change_point(differential_arr[2], differential_arr[3]):
-                cycle_status = point_detection(WINDOW_DATA, current, change_point, differential_arr[2],
-                                               differential_arr[3], num, i, cycle_status)
-            elif cycle_status == 'door_close':
+                point_detection(WINDOW_DATA, current, change_point, differential_arr[2], differential_arr[3], num, i,
+                                time_dict, status_dict, heating_parameter_dict, find_change_point_dict, phase_list_dict)
+            elif status_dict['cycle'] == 'door_close':
                 if num == 1:
                     thr = 40
                 else:
                     thr = 70
-                cycle_status = module_door_close(WINDOW_DATA, current, change_point, i, thr, cycle_status)
+                module_door_close(WINDOW_DATA, current, change_point, i, thr, time_dict, status_dict, heating_parameter_dict, find_change_point_dict, phase_list_dict)
     for i in range(TIME_MARGIN):
         change_point.append(None)
 
+    return time_dict, phase_list_dict
 
-def before_work(WINDOW_DATA, i, current, change_point, count_0_gas, temp_low, heat_start_index, heat_start,
-                flag_s_1, flag_s_2, furnace_status, save_temp, save_time, num, cycle_status,
-                num_of_door_open, close_while_heat, save_end, thr_end):
-    past_data = []
-    future_data = []
-    if heat_start is False:
-        if is_work_start(WINDOW_DATA, current, start_real):
-            flag_s_1 = 1
-            heat_start_index = i
-        if is_work_end(WINDOW_DATA, current, end_real) and heat_start_index is not None:
-            save_end = WINDOW_DATA[current]['TIME']
-            flag_s_1 = 0
-            heat_start_index = None
-        # 일단 가스로 만든다. 모니터링은 누락을 고려하여 만들어야 한다.
-        if WINDOW_DATA[current + 1]['GAS'] > 0 and WINDOW_DATA[current + 2]['GAS'] > 0 and WINDOW_DATA[current + 3][
-            'GAS'] > 0:
-            if temp_low is None:
-                temp_low = i
-                save_temp = WINDOW_DATA[current]['TEMPERATURE']
-                save_time = WINDOW_DATA[current]['TIME']
-                flag_s_2 = 1
-        if flag_s_2 == 1:
-            sum_gas = 0
-            for j in range(HALF_MARGIN):
-                sum_gas += WINDOW_DATA[current + j]['GAS']
-            if sum_gas == 0:
-                temp_low = None
-                flag_s_2 = 0
-                num_of_door_open = 0
-                cycle_status = 'initial'
-                temp_array = [0, 0, None, 0, 0, 0, dt.datetime, 0]
-            else:
-                pass
-        if flag_s_1 == 1 and flag_s_2 == 1:
-            heat_start = True
-            # close_while_heat = None
-    if flag_s_2 == 1:
-        differencial_arr = get_diff(WINDOW_DATA, current)
-        if (differencial_arr[0] != 0 or differencial_arr[1] != 0) and differencial_arr[0] * differencial_arr[1] <= 0:
-            cycle_status, num_of_door_open, close_while_heat = \
-                point_detection_while_heating(WINDOW_DATA, current, change_point, differencial_arr[0],
-                                              differencial_arr[1], num, i, cycle_status, num_of_door_open,
-                                              close_while_heat)
-        elif (differencial_arr[2] != 0 or differencial_arr[3] != 0) and differencial_arr[2] * differencial_arr[3] <= 0:
-            cycle_status, num_of_door_open, close_while_heat = \
-                point_detection_while_heating(WINDOW_DATA, current, change_point, differencial_arr[0],
-                                              differencial_arr[1], num, i, cycle_status, num_of_door_open,
-                                              close_while_heat)
-    if heat_start is True:
+
+def before_work(WINDOW_DATA, i, current, num, change_point, heating_parameter_dict, status_dict,
+                find_change_point_dict, time_dict, phase_list_dict, thr_end):
+    # 가열로 가열 시작 전
+    if heating_parameter_dict['is_heat_start'] is False:
+        # 가열로 시간 조건
+        if is_work_start(WINDOW_DATA, current, time_dict):
+            heating_parameter_dict['time_condition'] = True
+            heating_parameter_dict['real_heat_start_index'] = i
+        if is_work_end(WINDOW_DATA, current, time_dict) and heating_parameter_dict['real_heat_start_index'] is not None:
+            heating_parameter_dict['last_work_end_time'] = WINDOW_DATA[current]['TIME']
+            heating_parameter_dict['time_condition'] = False
+            heating_parameter_dict['real_heat_start_index'] = None
+        # 가열로 가스 조건
+        check_gas_condition(WINDOW_DATA, current, i, heating_parameter_dict, status_dict, find_change_point_dict)
+        # 두 조건 체크
+        if heating_parameter_dict['time_condition'] and heating_parameter_dict['gas_condition']:
+            heating_parameter_dict['is_heat_start'] = True
+    # 가열로 가열 시작 중
+    if heating_parameter_dict['is_heat_start'] is True:
+        differential_arr = get_diff(WINDOW_DATA, current)
+        if is_this_point_can_be_a_change_point(differential_arr[0], differential_arr[1]):
+            point_detection_while_heating(WINDOW_DATA, current, change_point, differential_arr[0],
+                                          differential_arr[1], num, i, time_dict, status_dict, heating_parameter_dict,
+                                          find_change_point_dict)
+        elif is_this_point_can_be_a_change_point(differential_arr[2], differential_arr[3]):
+            point_detection_while_heating(WINDOW_DATA, current, change_point, differential_arr[2],
+                                          differential_arr[3], num, i, time_dict, status_dict, heating_parameter_dict,
+                                          find_change_point_dict)
         if WINDOW_DATA[current]['GAS'] == 0 and WINDOW_DATA[current]['GAS_OFF'] == 0:
-            count_0_gas += 1
-        for e in end_real:
-            if WINDOW_DATA[current]['TIME'] == e:
-                save_end = WINDOW_DATA[current]['TIME']
-                furnace_status = 'wait_for_heating'
-                temp_array = [0, 0, None, 0, 0, 0, dt.datetime, 0]
-                temp_low = None
-                heat_start_index = None
-                heat_start = False
-                flag_s_1 = 0
-                flag_s_2 = 0
-                count_0_gas = 0
+            heating_parameter_dict['count_0_gas'] += 1
+        if is_work_end(WINDOW_DATA, current, time_dict):
+            heating_parameter_dict['last_work_end_time'] = WINDOW_DATA[current]['TIME']
+            status_dict['furnace'] = 'wait_for_heating'
+            reset_change_point_dict(find_change_point_dict)
+            reset_heating_phase_dict(heating_parameter_dict)
         if float(WINDOW_DATA[current]['TEMPERATURE']) > thr_end:
+            past_data = []
+            future_data = []
             for j in range(TIME_MARGIN):
                 past_data.append(float(WINDOW_DATA[current + 1 + j]['TEMPERATURE']))
                 future_data.append(float(WINDOW_DATA[current - TIME_MARGIN + j]['TEMPERATURE']))
             if abs(np.mean(past_data) - np.mean(future_data)) < 1:
                 change_point[i] = WINDOW_DATA[current]['TEMPERATURE']
-                start = i
-                heating_ended_time_list.append(WINDOW_DATA[current]['TIME'])
-                if cycle_status == 'door_close':
-                    num_of_door_open += 1
-                if heat_start_index is not None:
-                    start_fix.append(save_time)
-                    change_point[temp_low] = save_temp
-                    if num_of_door_open == 1:
-                        if close_while_heat is None:
-                            heat.append(
-                                [temp_low, start, heat_start_index, count_0_gas, 0, save_time, save_temp, temp_low, save_end])
-                        else:
-                            heat.append([temp_low, start, heat_start_index, count_0_gas, num_of_door_open, close_while_heat[0],
-                                         close_while_heat[1], close_while_heat[2], save_end])
-                    else:
-                        if close_while_heat is None or num_of_door_open == 0:
-                            heat.append([temp_low, start, heat_start_index, count_0_gas, num_of_door_open, 0, 0, None, save_end])
-                        else:
-                            heat.append([temp_low, start, heat_start_index, count_0_gas, num_of_door_open, close_while_heat[0],
-                                         close_while_heat[1], close_while_heat[2], save_end])
-                temp_low = None
-                heat_start_index = None
-                furnace_status = 'after_heating_to_end'
-                flag_ready = 1
-                heat_start = False
-                flag_s_1 = 0
-                flag_s_2 = 0
-                count_0_gas = 0
-                save_temp = 0
-                save_time = 0
-                cycle_status = 'initial'
-                temp_array = [0, 0, None, 0, 0, 0, dt.datetime, 0]
-                num_of_door_open = 0
-                close_while_heat = None
+                heating_parameter_dict['work_end_index'] = i
+                time_dict['heat_ended_time_list'].append(WINDOW_DATA[current]['TIME'])
+                if status_dict['cycle'] == 'door_close':
+                    heating_parameter_dict['num_of_door_open'] += 1
+                if heating_parameter_dict['real_heat_start_index'] is not None:
+                    time_dict['fixed_start_time_list'].append(heating_parameter_dict['heat_start_time'])
+                    change_point[heating_parameter_dict['heat_start_index']] = heating_parameter_dict['heat_start_temperature']
+                    setting_heat_phase_list(phase_list_dict, heating_parameter_dict, find_change_point_dict)
+                reset_change_point_dict(find_change_point_dict)
+                reset_heating_phase_dict(heating_parameter_dict)
+                status_dict['furnace'] = 'after_heating_to_end'
+                status_dict['cycle'] = 'initial'
+                heating_parameter_dict['wait_until_door_after_heating'] = True
             past_data.clear()
             future_data.clear()
-    return furnace_status, heat_start, flag_s_1, flag_s_2, count_0_gas, heat_start_index, temp_low, \
-           save_temp, save_time, cycle_status, num_of_door_open, close_while_heat, save_end
 
 
-def point_detection_while_heating(WINDOW_DATA, current, change_point, pp_mean, ff_mean,
-                                  num, i, cycle_status, num_of_door_open, close_while_heat):
+def point_detection_while_heating(WINDOW_DATA, current, change_point, pp_mean, ff_mean, num, i, time_dict, status_dict,
+                                  heating_parameter_dict, find_change_point_dict):
     if num == 1:
         thr = 40
-    elif num != 1:
+    else:
         thr = 70
 
     # 대분류
-    cycle_status = categorize_while_heat(pp_mean, ff_mean, WINDOW_DATA, current, thr, i, cycle_status)
+    categorize(pp_mean, ff_mean, WINDOW_DATA, current, thr, i, time_dict, status_dict, find_change_point_dict)
 
     # 대분류를 바탕으로 change point detect
 
-    if cycle_status == 'initial':
+    if status_dict['cycle'] == 'initial':
         # 초기화
-        if temp_array[0] == 0:
-            temp_array[0] = temp_array[1]
-            cycle_status = 'wait'
-            # temp_array['previous_status'] = temp_array['current_status']
+        if find_change_point_dict['before_state'] is None:
+            find_change_point_dict['before_state'] = find_change_point_dict['after_state']
+            status_dict['cycle'] = 'wait'
 
-    elif cycle_status == 'door_open':
-        cycle_status, close_while_heat = module_door_open_while_heat(WINDOW_DATA, current, cycle_status,
-                                                                     close_while_heat)
+    elif status_dict['cycle'] == 'door_open':
+        module_door_open_while_heat(WINDOW_DATA, current, i, status_dict, find_change_point_dict)
 
-    elif cycle_status == 'door_close':
-        cycle_status, num_of_door_open, close_while_heat = \
-            module_door_close_while_heat(WINDOW_DATA, current, change_point, i,
-                                         thr, cycle_status, num_of_door_open, close_while_heat)
+    elif status_dict['cycle'] == 'door_close':
+        module_door_close_while_heat(WINDOW_DATA, current, change_point, i, thr, time_dict, status_dict, heating_parameter_dict, find_change_point_dict)
 
-    elif cycle_status == 'wait':
+    elif status_dict['cycle'] == 'wait':
         # 대기상태
-        if (temp_array[0] == 9 or temp_array[0] == 1) and temp_array[1] == 8:
-            temp_array[0] = temp_array[1]
-
-    return cycle_status, num_of_door_open, close_while_heat
+        if is_ready(find_change_point_dict):
+            find_change_point_dict['before_state'] = find_change_point_dict['after_state']
 
 
 # change_point Algorithm functions:
-def point_detection(WINDOW_DATA, current, change_point, pp_mean, ff_mean, num, i, cycle_status):
+def point_detection(WINDOW_DATA, current, change_point, pp_mean, ff_mean, num, i, time_dict, status_dict,
+                                  heating_parameter_dict, find_change_point_dict, phase_list_dict):
     if num == 1:
         thr = 40
-    elif num != 1:
+    else:
         thr = 70
 
     # 대분류
-    cycle_status = categorize(pp_mean, ff_mean, WINDOW_DATA, current, thr, i, cycle_status)
+    categorize(pp_mean, ff_mean, WINDOW_DATA, current, thr, i, time_dict, status_dict, find_change_point_dict)
 
     # 대분류를 바탕으로 change point detect
-    if cycle_status == 'initial':
+
+    if status_dict['cycle'] == 'initial':
         # 초기화
-        if temp_array[0] == 0:
-            temp_array[0] = temp_array[1]
-            cycle_status = 'wait'
+        if find_change_point_dict['before_state'] is None:
+            find_change_point_dict['before_state'] = find_change_point_dict['after_state']
+            status_dict['cycle'] = 'wait'
 
-    elif cycle_status == 'door_open':
-        cycle_status = module_door_open(WINDOW_DATA, current, cycle_status, i)
+    elif status_dict['cycle'] == 'door_open':
+        module_door_open(WINDOW_DATA, current, i, status_dict, find_change_point_dict)
 
-    elif cycle_status == 'door_close':
-        cycle_status = module_door_close(WINDOW_DATA, current, change_point, i, thr, cycle_status)
+    elif status_dict['cycle'] == 'door_close':
+        module_door_close(WINDOW_DATA, current, change_point, i, thr, time_dict, status_dict, heating_parameter_dict, find_change_point_dict, phase_list_dict)
 
-    elif cycle_status == 'wait':
+    elif status_dict['cycle'] == 'wait':
         # 대기상태
-        if (temp_array[0] == 9 or temp_array[0] == 1) and temp_array[1] == 8:
-            temp_array[0] = temp_array[1]
-
-    return cycle_status
+        if is_ready(find_change_point_dict):
+            find_change_point_dict['before_state'] = find_change_point_dict['after_state']
 
 
-def categorize_while_heat(pp_mean, ff_mean, WINDOW_DATA, current, thr, i, cycle_status):
+def categorize(pp_mean, ff_mean, WINDOW_DATA, current, thr, i, time_dict, status_dict, find_change_point_dict):
     #  case : + > 0
     if pp_mean > 0 and ff_mean == 0:
-        temp_array[1] = 1
-        # temp_array['current_status'] = 'plus_to_zero'
-        if cycle_status == 'door_close' and temp_array[4] != 0:
-            if temp_array[7] == 0:
-                temp_array[7] = {'index': i, 'now': WINDOW_DATA[current]}
-            elif temp_array[7]['now']['TEMPERATURE'] < WINDOW_DATA[current]['TEMPERATURE'] - 5:
-                temp_array[7] = {'index': i, 'now': WINDOW_DATA[current]}
+        find_change_point_dict['after_state'] = 'plus-to-zero'
+        if status_dict['cycle'] == 'door_close' and find_change_point_dict['door_close_estimate'] is not None:
+            if find_change_point_dict['reheat_end_candidate'] is None:
+                find_change_point_dict['reheat_end_candidate'] = {'index': i, 'now': WINDOW_DATA[current]}
+            elif find_change_point_dict['reheat_end_candidate']['now']['TEMPERATURE'] < WINDOW_DATA[current]['TEMPERATURE'] - 5:
+                find_change_point_dict['reheat_end_candidate'] = {'index': i, 'now': WINDOW_DATA[current]}
 
     # case : + > -
     elif pp_mean > 0 and ff_mean < 0:
-        temp_array[1] = 2
-        # temp_array['current_status'] = 'plus_to_minus'
-        if temp_array[5] == 0:
-            for l in range(1, 10):
-                if WINDOW_DATA[current]['TIME'] in end_real:
-                    break
-                elif float(WINDOW_DATA[current]['TEMPERATURE']) - float(WINDOW_DATA[current + l]['TEMPERATURE']) > thr:
-                    temp_array[5] = 1
-                    cycle_status = 'door_open'
-                    temp_array[0] = temp_array[1]
-                    temp_array[6] = WINDOW_DATA[current + l]['TIME']
-                    if temp_array[2] is None or temp_array[2]['now']['TEMPERATURE'] < WINDOW_DATA[current][
-                        'TEMPERATURE']:
-                        temp_array[2] = {'index': i, 'now': WINDOW_DATA[current]}
-                    if flag_ready == 1 and temp_array[2]['now']['TIME'] == WINDOW_DATA[current]['TIME']:
-                        flag_ready = 0
-                    if close != 0 and temp_array[2]['now']['TIME'] == WINDOW_DATA[current]['TIME']:
-                        close = 0
-                    break
-        if temp_array[5] == 1:
-            if temp_array[2] is not None and temp_array[2]['now']['TEMPERATURE'] < WINDOW_DATA[current]['TEMPERATURE']:
-                temp_array[2] = {'index': i, 'now': WINDOW_DATA[current]}
-        if cycle_status == 'door_close' and temp_array[4] != 0:
-            if temp_array[7] == 0:
-                temp_array[7] = {'index': i, 'now': WINDOW_DATA[current]}
-            elif temp_array[7]['now']['TEMPERATURE'] < WINDOW_DATA[current]['TEMPERATURE'] - 5:
-                temp_array[7] = {'index': i, 'now': WINDOW_DATA[current]}
+        find_change_point_dict['after_state'] = 'plus-to-minus'
+        if not find_change_point_dict['door_open']:
+            if is_door_open(WINDOW_DATA, current, thr, time_dict, find_change_point_dict, i):
+                find_change_point_dict['door_open'] = True
+                status_dict['cycle'] = 'door_open'
+                find_change_point_dict['before_state'] = find_change_point_dict['after_state']
+        if find_change_point_dict['door_open']:
+            if find_change_point_dict['door_open_estimate'] is not None and \
+                    find_change_point_dict['door_open_estimate']['now']['TEMPERATURE'] < WINDOW_DATA[current]['TEMPERATURE']:
+                find_change_point_dict['door_open_estimate'] = {'index': i, 'now': WINDOW_DATA[current]}
+        if status_dict['cycle'] == 'door_close' and find_change_point_dict['door_close_estimate'] is not None:
+            if find_change_point_dict['reheat_end_candidate'] is None:
+                find_change_point_dict['reheat_end_candidate'] = {'index': i, 'now': WINDOW_DATA[current]}
+            elif find_change_point_dict['reheat_end_candidate']['now']['TEMPERATURE'] < WINDOW_DATA[current]['TEMPERATURE'] - 5:
+                find_change_point_dict['reheat_end_candidate'] = {'index': i, 'now': WINDOW_DATA[current]}
 
     # case : - > 0
     elif pp_mean < 0 and ff_mean == 0:
-        temp_array[1] = 4
-        # temp_array['current_status'] = 'minus_to_zero'
-        if temp_array[5] == 1:
-            if temp_array[4] == 0:
-                temp_array[4] = {'index': i, 'now': WINDOW_DATA[current]}
-            elif temp_array[4]['now']['TEMPERATURE'] > WINDOW_DATA[current]['TEMPERATURE']:
-                temp_array[4] = {'index': i, 'now': WINDOW_DATA[current]}
+        find_change_point_dict['after_state'] = 'minus-to-zero'
+        if find_change_point_dict['door_open']:
+            if find_change_point_dict['door_close_estimate'] is None:
+                find_change_point_dict['door_close_estimate'] = {'index': i, 'now': WINDOW_DATA[current]}
+            elif find_change_point_dict['door_close_estimate']['now']['TEMPERATURE'] > WINDOW_DATA[current]['TEMPERATURE']:
+                find_change_point_dict['door_close_estimate'] = {'index': i, 'now': WINDOW_DATA[current]}
+            if find_change_point_dict['reheat_end_candidate'] is not None:
+                find_change_point_dict['reheat_end_candidate'] = None
 
     # case : - > +
     elif pp_mean < 0 and ff_mean > 0:
-        temp_array[1] = 6
-        # temp_array['current_status'] = 'minus_to_plus'
-        if temp_array[5] == 1:
-            if temp_array[4] == 0:
-                temp_array[4] = {'index': i, 'now': WINDOW_DATA[current]}
-            elif temp_array[4]['now']['TEMPERATURE'] > WINDOW_DATA[current]['TEMPERATURE']:
-                temp_array[4] = {'index': i, 'now': WINDOW_DATA[current]}
+        find_change_point_dict['after_state'] = 'minus-to-plus'
+        if find_change_point_dict['door_open']:
+            if find_change_point_dict['door_close_estimate'] is None:
+                find_change_point_dict['door_close_estimate'] = {'index': i, 'now': WINDOW_DATA[current]}
+            elif find_change_point_dict['door_close_estimate']['now']['TEMPERATURE'] > WINDOW_DATA[current]['TEMPERATURE']:
+                find_change_point_dict['door_close_estimate'] = {'index': i, 'now': WINDOW_DATA[current]}
+            if find_change_point_dict['reheat_end_candidate'] is not None:
+                find_change_point_dict['reheat_end_candidate'] = None
 
     # case : 0 > -
     elif pp_mean == 0 and ff_mean < 0:
-        temp_array[1] = 8
-        # temp_array['current_status'] = 'zero_to_minus'
-        if temp_array[5] == 0:
-            for l in range(1, 10):
-                if WINDOW_DATA[current]['TIME'] in end_real:
-                    break
-                elif float(WINDOW_DATA[current]['TEMPERATURE']) - float(WINDOW_DATA[current + l]['TEMPERATURE']) > thr:
-                    temp_array[5] = 1
-                    cycle_status = 'door_open'
-                    temp_array[0] = temp_array[1]
-                    temp_array[6] = WINDOW_DATA[current + l]['TIME']
-                    if temp_array[2] is None or temp_array[2]['now']['TEMPERATURE'] < WINDOW_DATA[current][
-                        'TEMPERATURE']:
-                        temp_array[2] = {'index': i, 'now': WINDOW_DATA[current]}
-                    if flag_ready == 1 and temp_array[2]['now']['TIME'] == WINDOW_DATA[current]['TIME']:
-                        flag_ready = 0
-                    if close != 0 and temp_array[2]['now']['TIME'] == WINDOW_DATA[current]['TIME']:
-                        close = 0
-                    break
-        if temp_array[5] == 1:
-            if temp_array[2] is not None and temp_array[2]['now']['TEMPERATURE'] < WINDOW_DATA[current]['TEMPERATURE']:
-                temp_array[2] = {'index': i, 'now': WINDOW_DATA[current]}
+        find_change_point_dict['after_state'] = 'zero-to-minus'
+        if not find_change_point_dict['door_open']:
+            if is_door_open(WINDOW_DATA, current, thr, time_dict, find_change_point_dict, i):
+                find_change_point_dict['door_open'] = True
+                status_dict['cycle'] = 'door_open'
+                find_change_point_dict['before_state'] = find_change_point_dict['after_state']
+        if find_change_point_dict['door_open']:
+            if find_change_point_dict['door_open_estimate'] is not None and \
+                    find_change_point_dict['door_open_estimate']['now']['TEMPERATURE'] < WINDOW_DATA[current]['TEMPERATURE']:
+                find_change_point_dict['door_open_estimate'] = {'index': i, 'now': WINDOW_DATA[current]}
 
     # case : 0 > +
     elif pp_mean == 0 and ff_mean > 0:
-        temp_array[1] = 9
-        # temp_array['current_status'] = 'zero_to_plus'
-
-    return cycle_status
+        find_change_point_dict['after_state'] = 'zero-to-plus'
 
 
-def categorize(pp_mean, ff_mean, WINDOW_DATA, current, thr, i, cycle_status):
-    #  case : + > 0
-    if pp_mean > 0 and ff_mean == 0:
-        temp_array[1] = 1
-        # temp_array['current_status'] = 'plus_to_zero'
-        if cycle_status == 'door_close' and temp_array[4] != 0:
-            if temp_array[7] == 0:
-                temp_array[7] = {'index': i, 'now': WINDOW_DATA[current]}
-            elif temp_array[7]['now']['TEMPERATURE'] < WINDOW_DATA[current]['TEMPERATURE'] - 5:
-                temp_array[7] = {'index': i, 'now': WINDOW_DATA[current]}
-
-    # case : + > -
-    elif pp_mean > 0 and ff_mean < 0:
-        temp_array[1] = 2
-        # temp_array['current_status'] = 'plus_to_minus'
-        if temp_array[5] == 0:
-            if is_door_open(WINDOW_DATA, current, thr, end_real, temp_array, i):
-                temp_array[5] = 1
-                cycle_status = 'door_open'
-                temp_array[0] = temp_array[1]
-        if temp_array[5] == 1:
-            if temp_array[2] is not None and temp_array[2]['now']['TEMPERATURE'] < WINDOW_DATA[current]['TEMPERATURE']:
-                temp_array[2] = {'index': i, 'now': WINDOW_DATA[current]}
-        if cycle_status == 'door_close' and temp_array[4] != 0:
-            if temp_array[7] == 0:
-                temp_array[7] = {'index': i, 'now': WINDOW_DATA[current]}
-            elif temp_array[7]['now']['TEMPERATURE'] < WINDOW_DATA[current]['TEMPERATURE'] - 5:
-                temp_array[7] = {'index': i, 'now': WINDOW_DATA[current]}
-
-    # case : - > 0
-    elif pp_mean < 0 and ff_mean == 0:
-        temp_array[1] = 4
-        # temp_array['current_status'] = 'minus_to_zero'
-        if temp_array[5] == 1:
-            if temp_array[4] == 0:
-                temp_array[4] = {'index': i, 'now': WINDOW_DATA[current]}
-            elif temp_array[4]['now']['TEMPERATURE'] > WINDOW_DATA[current]['TEMPERATURE']:
-                temp_array[4] = {'index': i, 'now': WINDOW_DATA[current]}
-            if temp_array[7] != 0:
-                temp_array[7] = 0
-
-    # case : - > +
-    elif pp_mean < 0 and ff_mean > 0:
-        temp_array[1] = 6
-        # temp_array['current_status'] = 'minus_to_plus'
-        if temp_array[5] == 1:
-            if temp_array[4] == 0:
-                temp_array[4] = {'index': i, 'now': WINDOW_DATA[current]}
-            elif temp_array[4]['now']['TEMPERATURE'] > WINDOW_DATA[current]['TEMPERATURE']:
-                temp_array[4] = {'index': i, 'now': WINDOW_DATA[current]}
-            if temp_array[7] != 0:
-                temp_array[7] = 0
-
-    # case : 0 > -
-    elif pp_mean == 0 and ff_mean < 0:
-        temp_array[1] = 8
-        # temp_array['current_status'] = 'zero_to_minus'
-        if temp_array[5] == 0:
-            if is_door_open(WINDOW_DATA, current, thr, end_real, temp_array, i):
-                temp_array[5] = 1
-                cycle_status = 'door_open'
-                temp_array[0] = temp_array[1]
-        if temp_array[5] == 1:
-            if temp_array[2] is not None and temp_array[2]['now']['TEMPERATURE'] < WINDOW_DATA[current]['TEMPERATURE']:
-                temp_array[2] = {'index': i, 'now': WINDOW_DATA[current]}
-
-    # case : 0 > +
-    elif pp_mean == 0 and ff_mean > 0:
-        temp_array[1] = 9
-        # temp_array['current_status'] = 'zero_to_plus'
-
-    return cycle_status
-
-
-def module_door_open_while_heat(WINDOW_DATA, current, cycle_status, close_while_heat):
+def module_door_open_while_heat(WINDOW_DATA, current, i, status_dict, find_change_point_dict):
     # 문열림 갱신
-    if temp_array[0] == 2 and temp_array[1] == 8:
-        temp_array[0] = temp_array[1]
+    if find_change_point_dict['before_state'] == 'plus-to-minus' and find_change_point_dict['after_state'] == 'zero-to-minus':
+        find_change_point_dict['before_state'] = find_change_point_dict['after_state']
 
     # 문닫힘
-    elif temp_array[5] == 1 and (temp_array[0] == 8 or temp_array[0] == 2) and (
-            temp_array[1] == 6 or temp_array[1] == 4) and temp_array[6] <= WINDOW_DATA[current]['TIME']:
-        if temp_array[3] == 0:
-            temp_array[3] = {'index': temp_array[2]['index'], 'now': temp_array[2]['now']}
-        temp_array[2] = None
-        temp_array[0] = temp_array[1]
-        cycle_status = 'door_close'
-        close_while_heat = [temp_array[4]['now']['TIME'], temp_array[4]['now']['TEMPERATURE'], temp_array[4]['index']]
-    return cycle_status, close_while_heat
+    elif check_door_close(WINDOW_DATA, current, find_change_point_dict):
+        if find_change_point_dict['door_open_save'] is None:
+            find_change_point_dict['door_open_save'] = {'index': find_change_point_dict['door_open_estimate']['index'], 'now': find_change_point_dict['door_open_estimate']['now']}
+        if find_change_point_dict['door_close_estimate'] is None:
+            find_change_point_dict['door_close_estimate'] = {'index': i, 'now': WINDOW_DATA[current]}
+        find_change_point_dict['door_open_estimate'] = None
+        find_change_point_dict['before_state'] = find_change_point_dict['after_state']
+        status_dict['cycle'] = 'door_close'
+        find_change_point_dict['door_close'] = [find_change_point_dict['door_close_estimate']['now']['TIME'],
+                                                find_change_point_dict['door_close_estimate']['now']['TEMPERATURE'],
+                                                find_change_point_dict['door_close_estimate']['index']]
 
 
 # 문열림 - 문닫힘 구간
-def module_door_open(WINDOW_DATA, current, cycle_status, i):
+def module_door_open(WINDOW_DATA, current, i, status_dict, find_change_point_dict):
     # 문열림 갱신
-    if temp_array[0] == 2 and temp_array[1] == 8:
-        temp_array[0] = temp_array[1]
+    if find_change_point_dict['before_state'] == 'plus-to-minus' and find_change_point_dict['after_state'] == 'zero-to-minus':
+        find_change_point_dict['before_state'] = find_change_point_dict['after_state']
 
     # 문닫힘
-    elif temp_array[5] == 1 and (temp_array[0] == 8 or temp_array[0] == 2) and (
-            temp_array[1] == 6 or temp_array[1] == 4) and temp_array[6] <= WINDOW_DATA[current]['TIME']:
-        if temp_array[3] == 0:
-            temp_array[3] = {'index': temp_array[2]['index'], 'now': temp_array[2]['now']}
-        if temp_array[4] == 0:
-            temp_array[4] = {'index': i, 'now': WINDOW_DATA[current]}
-        # print(WINDOW_DATA[current]['TIME'], temp_array)
-        temp_array[2] = None
-        temp_array[0] = temp_array[1]
-        cycle_status = 'door_close'
-    return cycle_status
+    elif check_door_close(WINDOW_DATA, current, find_change_point_dict):
+        if find_change_point_dict['door_open_save'] is None:
+            find_change_point_dict['door_open_save'] = {'index': find_change_point_dict['door_open_estimate']['index'], 'now': find_change_point_dict['door_open_estimate']['now']}
+        if find_change_point_dict['door_close_estimate'] is None:
+            find_change_point_dict['door_close_estimate'] = {'index': i, 'now': WINDOW_DATA[current]}
+        find_change_point_dict['door_open_estimate'] = None
+        find_change_point_dict['before_state'] = find_change_point_dict['after_state']
+        status_dict['cycle'] = 'door_close'
 
 
-def module_door_close_while_heat(WINDOW_DATA, current, change_point, i, thr, cycle_status, num_of_door_open, close_while_heat):
+def module_door_close_while_heat(WINDOW_DATA, current, change_point, i, thr, time_dict, status_dict, heating_parameter_dict, find_change_point_dict):
     # 문닫힘 갱신
-    if (temp_array[0] == 4 or temp_array[0] == 6) and (temp_array[1] == 4 or temp_array[1] == 6):
-        temp_array[0] = temp_array[1]
+    if is_still_lower_point(find_change_point_dict):
+        find_change_point_dict['before_state'] = find_change_point_dict['after_state']
 
     # 재가열 완료
-    elif temp_array[5] == 1 and (reheat_end(WINDOW_DATA, current, 5) or is_door_open(WINDOW_DATA, current, thr)) and\
-            temp_array[7] != 0 and temp_array[4] != 0:
-        change_point[temp_array[4]['index']] = temp_array[4]['now']['TEMPERATURE']
-        change_point[temp_array[3]['index']] = temp_array[3]['now']['TEMPERATURE']
-        change_point[temp_array[7]['index']] = temp_array[7]['now']['TEMPERATURE']
-        temp_array[3] = 0
-        temp_array[5] = 0
-        temp_array[7] = 0
-        if temp_array[5] == 0 and temp_array[1] == 2:
-            for l in range(1, 5):
-                if WINDOW_DATA[current]['TIME'] in end_real:
-                    break
-                elif float(WINDOW_DATA[current]['TEMPERATURE']) - float(
-                        WINDOW_DATA[current + l]['TEMPERATURE']) > thr:
-                    temp_array[5] = 1
-                    cycle_status = 'door_open'
-                    temp_array[6] = WINDOW_DATA[current + l]['TIME']
-                    if temp_array[2] is None or temp_array[2]['now']['TEMPERATURE'] < WINDOW_DATA[current][
-                        'TEMPERATURE']:
-                        temp_array[2] = {'index': i, 'now': WINDOW_DATA[current]}
-                    break
-        if temp_array[5] == 0:
-            close = i
-            cycle_status = 'wait'
-        close_while_heat = [temp_array[4]['now']['TIME'], temp_array[4]['now']['TEMPERATURE'], temp_array[4]['index']]
-        temp_array[4] = 0
-        temp_array[0] = temp_array[1]
-        num_of_door_open += 1
-    return cycle_status, num_of_door_open, close_while_heat
+    elif check_reheat_end(find_change_point_dict, WINDOW_DATA, current, i, thr, time_dict):
+        change_point[find_change_point_dict['door_close_estimate']['index']] = find_change_point_dict['door_close_estimate']['now']['TEMPERATURE']
+        change_point[find_change_point_dict['door_open_save']['index']] = find_change_point_dict['door_open_save']['now']['TEMPERATURE']
+        change_point[find_change_point_dict['reheat_end_candidate']['index']] = find_change_point_dict['reheat_end_candidate']['now']['TEMPERATURE']
+        find_change_point_dict['door_open'] = False
+        find_change_point_dict['door_open_save'] = None
+        find_change_point_dict['reheat_end_candidate'] = None
+        if not find_change_point_dict['door_open'] and find_change_point_dict['after_state'] == 'plus-to-minus':
+            if is_door_open(WINDOW_DATA, current, thr, time_dict, find_change_point_dict, i):
+                find_change_point_dict['door_open'] = True
+                status_dict['cycle'] = 'door_open'
+                find_change_point_dict['before_state'] = 'plus-to-minus'
+        if not find_change_point_dict['door_open']:
+            status_dict['cycle'] = 'wait'
+        find_change_point_dict['door_close'] = [find_change_point_dict['door_close_estimate']['now']['TIME'],
+                                                find_change_point_dict['door_close_estimate']['now']['TEMPERATURE'],
+                                                find_change_point_dict['door_close_estimate']['index']]
+        find_change_point_dict['door_close_estimate'] = None
+        find_change_point_dict['before_state'] = find_change_point_dict['after_state']
+        heating_parameter_dict['num_of_door_open'] += 1
 
 
 # 문닫힘 - 재가열완료 구간
-def module_door_close(WINDOW_DATA, current, change_point, i, thr, cycle_status):
+def module_door_close(WINDOW_DATA, current, change_point, i, thr, time_dict, status_dict, heating_parameter_dict, find_change_point_dict, phase_list_dict):
     # 문닫힘 갱신
-    if (temp_array[0] == 4 or temp_array[0] == 6) and (temp_array[1] == 4 or temp_array[1] == 6):
-        temp_array[0] = temp_array[1]
+    if is_still_lower_point(find_change_point_dict):
+        find_change_point_dict['before_state'] = find_change_point_dict['after_state']
 
     # 재가열 완료
-    elif temp_array[5] == 1 and (reheat_end(WINDOW_DATA, current, 5) or is_door_open(WINDOW_DATA, current, thr, end_real)) and\
-            temp_array[7] != 0 and temp_array[4] != 0:
-        change_point[temp_array[4]['index']] = temp_array[4]['now']['TEMPERATURE']
-        change_point[temp_array[3]['index']] = temp_array[3]['now']['TEMPERATURE']
-        change_point[temp_array[7]['index']] = temp_array[7]['now']['TEMPERATURE']
-        op_en.append([temp_array[3]['index'], temp_array[4]['index'], temp_array[7]['index']])
-        if flag_ready == 1:
-            hold.append([start, temp_array[3]['index']])
-            flag_ready = 0
-            start = None
-        elif close != 0:
-            hold.append([close, temp_array[3]['index']])
-            close = 0
-        temp_array[3] = 0
-        temp_array[5] = 0
-        # temp_array[7] = 0
-        if temp_array[5] == 0 and temp_array[1] == 2:
-            if is_door_open(WINDOW_DATA, current, thr, end_real, temp_array, i):
-                temp_array[5] = 1
-                cycle_status = 'door_open'
-        if temp_array[5] == 0:
-            close = temp_array[7]['index']
-            cycle_status = 'wait'
-        temp_array[7] = 0
-        temp_array[4] = 0
-        temp_array[0] = temp_array[1]
-    return cycle_status
+    elif check_reheat_end(find_change_point_dict, WINDOW_DATA, current, i, thr, time_dict):
+        change_point[find_change_point_dict['door_close_estimate']['index']] = find_change_point_dict['door_close_estimate']['now']['TEMPERATURE']
+        change_point[find_change_point_dict['door_open_save']['index']] = find_change_point_dict['door_open_save']['now']['TEMPERATURE']
+        change_point[find_change_point_dict['reheat_end_candidate']['index']] = find_change_point_dict['reheat_end_candidate']['now']['TEMPERATURE']
+        phase_list_dict['open'].append([find_change_point_dict['door_open_save']['index'],
+                                        find_change_point_dict['door_close_estimate']['index'],
+                                        find_change_point_dict['reheat_end_candidate']['index']])
+        if heating_parameter_dict['wait_until_door_open_after_heating']:
+            phase_list_dict['hold'].append([heating_parameter_dict['heat_end_index'],
+                                             find_change_point_dict['door_open_save']['index']])
+            heating_parameter_dict['wait_until_door_open_after_heating'] = False
+            heating_parameter_dict['heat_end_index'] = None
+        elif find_change_point_dict['door_close'] is not None:
+            phase_list_dict['hold'].append([find_change_point_dict['door_close'],
+                                            find_change_point_dict['door_open_save']['index']])
+            find_change_point_dict['door_close'] = None
+        find_change_point_dict['door_open'] = False
+        find_change_point_dict['door_open_save'] = None
+        if not find_change_point_dict['door_open'] and find_change_point_dict['after_state'] == 'plus-to-minus':
+            if is_door_open(WINDOW_DATA, current, thr, time_dict, find_change_point_dict, i):
+                find_change_point_dict['door_open'] = True
+                status_dict['cycle'] = 'door_open'
+                find_change_point_dict['before_state'] = 'plus-to-minus'
+        if not find_change_point_dict['door_open']:
+            status_dict['cycle'] = 'wait'
+            find_change_point_dict['door_close'] = find_change_point_dict['reheat_end_candidate']['index']
+        find_change_point_dict['reheat_end_candidate'] = None
+        find_change_point_dict['door_close_estimate'] = None
+        find_change_point_dict['before_state'] = find_change_point_dict['after_state']
 
 
-def initialize_status(time_zero, start_zero):
+def initialize_status(time_zero, start_zero, heating_phase_dict, status_dict):
     if (time_zero - start_zero).total_seconds() >= 0:
-        furnace_status = 'wait_for_heating'
-        flag_s_1 = 1
-        heat_start_index = 0
+        status_dict['furnace'] = 'wait_for_heating'
+        heating_phase_dict['time_condition'] = True
+        heating_phase_dict['real_heat_start_index'] = 0
     else:
-        furnace_status = 'wait_for_heating'
-        flag_s_1 = 0
-        heat_start_index = None
-    return furnace_status, flag_s_1, heat_start_index
+        status_dict['furnace'] = 'wait_for_heating'
 
 
-def check_end(time, real_end_time_list):
-    for e in real_end_time_list:
-        if time == e:
-            return True
+def check_gas_condition(WINDOW_DATA, current, i, heating_phase_dict, status_dict, find_change_point_dict):
+    if not heating_phase_dict['gas_condition']:
+        for t in range(1, GAS_CONDITION_WINDOW + 1):
+            if WINDOW_DATA[current + t]['GAS'] == 0:
+                return
+        if heating_phase_dict['heat_start_index'] is None:
+            heating_phase_dict['heat_start_index'] = i
+            heating_phase_dict['heat_start_temperature'] = WINDOW_DATA[current]['TEMPERATURE']
+            heating_phase_dict['heat_start_time'] = WINDOW_DATA[current]['TIME']
+            heating_phase_dict['gas_condition'] = True
+    else:
+        sum_gas = 0
+        for j in range(HALF_MARGIN):
+            sum_gas += WINDOW_DATA[current + j]['GAS']
+        if sum_gas == 0:
+            heating_phase_dict['heat_start_index'] = None
+            heating_phase_dict['gas_condition'] = False
+            heating_phase_dict['num_of_door_open'] = 0
+            status_dict['cycle_status'] = 'initial'
+            reset_change_point_dict(find_change_point_dict)
+        else:
+            pass
 
 
 # 기울기
@@ -602,63 +436,159 @@ def is_this_point_can_be_a_change_point(past_grad, future_grad):
         return False
 
 
-def reheat_end(WINDOW_DATA, current, margin):
-    p = []
-    f = []
-    for i in range(0, margin):
-        p.append(WINDOW_DATA[current - i]['TEMPERATURE'])
-        f.append(WINDOW_DATA[current + i]['TEMPERATURE'])
-    if abs(np.mean(p) - np.mean(f)) < 1:
+def is_work_end(WINDOW_DATA, current, time_dict):
+    if WINDOW_DATA[current]['TIME'] in time_dict['real_end_time_list']:
         return True
     else:
         return False
 
 
-def is_door_open(WINDOW_DATA, current, thr, end_real, temp_array=None, i=None):
-    for l in range(1, 10):
-        if is_work_end(WINDOW_DATA, current, end_real):
-            return False
-        elif float(WINDOW_DATA[current]['TEMPERATURE']) - float(WINDOW_DATA[current + l]['TEMPERATURE']) > thr:
-            if temp_array is not None and i is not None:
-                temp_array[6] = WINDOW_DATA[current + l]['TIME']
-                if temp_array[2] is None or temp_array[2]['now']['TEMPERATURE'] < WINDOW_DATA[current][
-                    'TEMPERATURE']:
-                    temp_array[2] = {'index': i, 'now': WINDOW_DATA[current]}
-            return True
-    return False
-
-
-def is_work_end(WINDOW_DATA, current, end_real):
-    if WINDOW_DATA[current]['TIME'] in end_real:
+def is_work_start(WINDOW_DATA, current, time_dict):
+    if WINDOW_DATA[current]['TIME'] in time_dict['real_start_time_list']:
         return True
     else:
         return False
 
 
-def is_work_start(WINDOW_DATA, current, start_real):
-    if WINDOW_DATA[current]['TIME'] in start_real:
-        return True
-    else:
-        return False
-
-
-def work_end(WINDOW_DATA, current, find_change_point_dict, hold, fixed_end_time_list, real_start_time_list, change_point, i,
-             flag_s_1, heat_start_index, door_close_index):
-    save_end = WINDOW_DATA[current]['TIME']
-    if find_change_point_dict[5] == 0 and door_close_index is not None:
-        hold.append([door_close_index, i])
-    if find_change_point_dict['door_open'] is True:
+def work_end(WINDOW_DATA, current, time_dict, phase_list_dict, find_change_point_dict, heating_parameter_dict, status_dict, change_point, i):
+    heating_parameter_dict['last_work_end_time'] = WINDOW_DATA[current]['TIME']
+    if not find_change_point_dict['door_open'] and find_change_point_dict['door_close'] is not None:
+        phase_list_dict['hold'].append([find_change_point_dict['door_close'], i])
+    if find_change_point_dict['door_open'] and (find_change_point_dict['door_open_estimate'] is not None or find_change_point_dict['door_open_save'] is not None):
         if find_change_point_dict['door_open_estimate'] is not None:
-            save_end = find_change_point_dict[2]['now']['TIME']
+            heating_parameter_dict['last_work_end_time'] = find_change_point_dict['door_open_estimate']['now']['TIME']
         elif find_change_point_dict['door_open_save'] is not None:
-            save_end = find_change_point_dict[3]['now']['TIME']
+            heating_parameter_dict['last_work_end_time'] = find_change_point_dict['door_open_save']['now']['TIME']
+    reset_change_point_dict(find_change_point_dict)
+    change_point[i] = WINDOW_DATA[current]['TEMPERATURE']
+    if is_work_start(WINDOW_DATA, current, time_dict):
+        heating_parameter_dict['time_condition'] = True
+        heating_parameter_dict['real_heat_start_index'] = i
+    find_change_point_dict['door_close'] = None
+    time_dict['fixed_end_time_list'].append(heating_parameter_dict['last_work_end_time'])
+    status_dict['furnace'] = 'wait_for_heating'
+
+
+def reset_change_point_dict(find_change_point_dict):
     for i in find_change_point_dict:
         find_change_point_dict[i] = None
-    change_point[i] = WINDOW_DATA[current]['TEMPERATURE']
-    if WINDOW_DATA[current]['TIME'] in real_start_time_list:
-        flag_s_1 = 1
-        heat_start_index = i
-    door_close_index = None
-    fixed_end_time_list.append(save_end)
-    furnace_status = 'wait_for_heating'
-    return flag_s_1, heat_start_index, door_close_index, furnace_status
+
+
+def reset_heating_phase_dict(heating_parameter_dict):
+    heating_parameter_dict['heat_start_index'] = None
+    heating_parameter_dict['real_heat_start_index'] = None
+    heating_parameter_dict['heat_start_temperature'] = None
+    heating_parameter_dict['heat_start_time'] = None
+    heating_parameter_dict['is_heat_start'] = False
+    heating_parameter_dict['gas_condition'] = False
+    heating_parameter_dict['time_condition'] = False
+    heating_parameter_dict['count_0_gas'] = 0
+    heating_parameter_dict['num_of_door_open'] = 0
+
+
+def setting_heat_phase_list(phase_list_dict, heating_parameter_dict, find_change_point_dict):
+    if heating_parameter_dict['num_of_door_open'] == 1:
+        if find_change_point_dict['door_close'] is None:
+            phase_list_dict['heat'].append([heating_parameter_dict['heat_start_index'],
+                                            heating_parameter_dict['heat_end_index'],
+                                            heating_parameter_dict['real_heat_start_index'],
+                                            heating_parameter_dict['count_0_gas'],
+                                            0,
+                                            heating_parameter_dict['heat_start_time'],
+                                            heating_parameter_dict['heat_start_temperature'],
+                                            heating_parameter_dict['heat_start_index'],
+                                            heating_parameter_dict['last_work_end_time']])
+        else:
+            phase_list_dict['heat'].append([heating_parameter_dict['heat_start_index'],
+                                            heating_parameter_dict['heat_end_index'],
+                                            heating_parameter_dict['real_heat_start_index'],
+                                            heating_parameter_dict['count_0_gas'],
+                                            heating_parameter_dict['num_of_door_open'],
+                                            find_change_point_dict['door_close'][0],
+                                            find_change_point_dict['door_close'][1],
+                                            find_change_point_dict['door_close'][2],
+                                            heating_parameter_dict['last_work_end_time']])
+    else:
+        if find_change_point_dict['door_close'] is None or heating_parameter_dict['num_of_door_open'] == 0:
+            phase_list_dict['heat'].append([heating_parameter_dict['heat_start_index'],
+                                            heating_parameter_dict['heat_end_index'],
+                                            heating_parameter_dict['real_heat_start_index'],
+                                            heating_parameter_dict['count_0_gas'],
+                                            heating_parameter_dict['num_of_door_open'],
+                                            0,
+                                            0,
+                                            None,
+                                            heating_parameter_dict['last_work_end_time']])
+        else:
+            phase_list_dict['heat'].append([heating_parameter_dict['heat_start_index'],
+                                            heating_parameter_dict['heat_end_index'],
+                                            heating_parameter_dict['real_heat_start_index'],
+                                            heating_parameter_dict['count_0_gas'],
+                                            heating_parameter_dict['num_of_door_open'],
+                                            find_change_point_dict['door_close'][0],
+                                            find_change_point_dict['door_close'][1],
+                                            find_change_point_dict['door_close'][2],
+                                            heating_parameter_dict['last_work_end_time']])
+
+
+def check_door_close(WINDOW_DATA, current, find_change_point_dict):
+    if find_change_point_dict['door_open'] and \
+            (find_change_point_dict['before_state'] == 'plus-to-minus' or find_change_point_dict['before_state'] == 'zero-to-minus') and\
+            (find_change_point_dict['after_state'] == 'minus-to-plus' or find_change_point_dict['after_state'] == 'minus-to-zero') and\
+            find_change_point_dict['door_close_save'] <= WINDOW_DATA[current]['TIME']:
+        return True
+    else:
+        return False
+
+
+def is_still_lower_point(find_change_point_dict):
+    if (find_change_point_dict['before_state'] == 'minus-to-zero' or find_change_point_dict[
+        'before_state'] == 'minus-to-plus') and \
+            (find_change_point_dict['after_state'] == 'minus-to-zero' or find_change_point_dict[
+                'before_state'] == 'minus-to-plus'):
+        return True
+    else:
+        return False
+
+
+def is_ready(find_change_point_dict):
+    if (find_change_point_dict['before_state'] == 'zero-to-plus' or find_change_point_dict['before_state'] == 'plus-to-zero') and\
+            find_change_point_dict['after_state'] == 'zero-to-minus':
+        return True
+    else:
+        return False
+
+
+def check_reheat_end(find_change_point_dict, WINDOW_DATA, current, i, thr, time_dict):
+    if find_change_point_dict['door_open'] is True and (reheat_end(WINDOW_DATA, current, i, HALF_MARGIN, find_change_point_dict) or is_door_open(WINDOW_DATA, current, thr, time_dict)) and\
+            find_change_point_dict['reheat_end_candidate'] is not None and find_change_point_dict['door_close_estimate'] is not None:
+        return True
+    else:
+        return False
+
+
+def reheat_end(WINDOW_DATA, current, i, margin, find_change_point_dict):
+    p = []
+    f = []
+    for j in range(0, margin):
+        p.append(WINDOW_DATA[current - j]['TEMPERATURE'])
+        f.append(WINDOW_DATA[current + j]['TEMPERATURE'])
+    if abs(np.mean(p) - np.mean(f)) < 1:
+        find_change_point_dict['reheat_end_candidate'] = {'index': i, 'now': WINDOW_DATA[current]}
+        return True
+    else:
+        return False
+
+
+def is_door_open(WINDOW_DATA, current, thr, time_dict, find_change_point_dict=None, i=None):
+    for l in range(1, TIME_MARGIN):
+        if is_work_end(WINDOW_DATA, current, time_dict):
+            return False
+        elif float(WINDOW_DATA[current]['TEMPERATURE']) - float(WINDOW_DATA[current + l]['TEMPERATURE']) > thr:
+            if find_change_point_dict is not None and i is not None:
+                find_change_point_dict['door_close_save'] = WINDOW_DATA[current + l]['TIME']
+                if find_change_point_dict['door_open_estimate'] is None or \
+                    find_change_point_dict['door_open_estimate']['now']['TEMPERATURE'] < WINDOW_DATA[current]['TEMPERATURE']:
+                    find_change_point_dict['door_open_estimate'] = {'index': i, 'now': WINDOW_DATA[current]}
+            return True
+    return False
