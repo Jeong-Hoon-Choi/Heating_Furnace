@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 
 # ------------------------------ make data ---------------------------------
-def work_start():
+def work_start(view):
     for num in work_:
         data = []
         change_point = []
@@ -23,9 +23,10 @@ def work_start():
         # print("find change_point done heating " + str(num))
         plotting(data, change_point, time_dict['fixed_start_time_list'], time_dict['fixed_end_time_list'], num,
                  time_dict['heat_ended_time_list'], time_dict['real_start_time_list'], time_dict['real_end_time_list'])
-        # make_database(data, num, h)
-        # h.sett(df_mat, base_path + 'HF_OUT/test_2019_a_')
+        make_database(data, num, h, phase_list_dict)
+        h.sett(df_mat, base_path + 'HF_OUT/test_2019_a_')
         print('DB_Done')
+    if view:
         plt.show()
 
 
@@ -91,13 +92,11 @@ def make_heat():
     HT_heat.df.read_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_heat.csv', encoding='euc-kr', index_col=0)
     HT_heat.df = HT_heat.df.reset_index(drop=True)
     HT_heat.change_list2()
-    # model_heat_kang(HT_heat, df_mat, './model/model_heat_0110.csv')
     model_heat_kang_ver_heat(HT_heat, df_mat, df_mat_heat, s_list, ss_list, sn_list, base_path + '/model5/model_' + str(work_[0]) + '.csv')
 
 
 # 호기 분리
 def detach_furnace():
-    df_con = pd.DataFrame()
     df_t = pd.read_csv(base_path + 'model5/model_' + str(work_[0]) + '.csv', encoding='euc-kr', index_col=0)
     for num in work_:
         df_t2 = pd.DataFrame(columns=df_t.columns)
@@ -204,30 +203,31 @@ def plot_time_energy():
 # clustering
 def furnace_clustering():
     df = pd.read_csv(base_path + 'model5/model_1.csv', encoding='euc-kr', index_col=0)
-    for i in p_bum:
-        arr_t = []
-        # df = pd.read_csv(base_path + 'analysis/hogi/' + str(i) + '.csv', encoding='euc-kr', index_col=0)
-        df_t = pd.DataFrame(columns=df.columns)
-        for i2, row in df.iterrows():
-            heat_flag = 0
-            sense_flag = 0
-            time_flag = 0
-            flag_m = 0
-            if int(df.loc[i2, '가열로번호']) in i:
-                if int(df.loc[i2, '열괴장입소재개수']) > 0 or int(df.loc[i2, '문열림횟수']) > 0:
-                    heat_flag = 1
-                if int(df.loc[i2, '민감소재장입개수']) > 0:
-                    sense_flag = 1
-                if int(df.loc[i2, '민감여부']) == 1:
-                    flag_m = 1
-                if int(df.loc[i2, '시간(총)']) <= 3600:
-                    time_flag = 1
-                if heat_flag == 0 and flag_m == 0 and time_flag == 0 and sense_flag == 1:
-                    df_t = df_t.append(row)
-        df_t = df_t.reset_index(drop=True)
-        # df_t.to_csv(base_path + 'analysis/hogi/' + str(i) + '_filtered.csv', encoding='euc-kr')
-        print(len(df_t.index))
-        df_t.to_csv(base_path + 'analysis/for_learning5/민감만/1h제외/' + str(i) + '.csv', encoding='euc-kr')
+    for condition in clustering_condition_constant:
+        for i in p_bum:
+            arr_t = []
+            # df = pd.read_csv(base_path + 'analysis/hogi/' + str(i) + '.csv', encoding='euc-kr', index_col=0)
+            df_t = pd.DataFrame(columns=df.columns)
+            for i2, row in df.iterrows():
+                heat_flag = 0
+                sense_flag = 0
+                time_flag = 0
+                flag_m = 0
+                if int(df.loc[i2, '가열로번호']) in i:
+                    if int(df.loc[i2, '열괴장입소재개수']) > 0 or int(df.loc[i2, '문열림횟수']) > 0:
+                        heat_flag = 1
+                    if int(df.loc[i2, '민감소재장입개수']) > 0:
+                        sense_flag = 1
+                    if int(df.loc[i2, '민감여부']) == 1:
+                        flag_m = 1
+                    if int(df.loc[i2, '시간(총)']) <= 3600:
+                        time_flag = 1
+                    if clustering_condition(condition, heat_flag, flag_m, time_flag, sense_flag):
+                        df_t = df_t.append(row)
+            df_t = df_t.reset_index(drop=True)
+            # df_t.to_csv(base_path + 'analysis/hogi/' + str(i) + '_filtered.csv', encoding='euc-kr')
+            print(len(df_t.index))
+            df_t.to_csv(base_path + 'analysis/for_learning5/' + condition + '/' + str(i) + '.csv', encoding='euc-kr')
 
 
 # ------------------------------ learning ---------------------------------

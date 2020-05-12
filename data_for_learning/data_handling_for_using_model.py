@@ -600,4 +600,37 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, sn_list, 
     # df_new_2.to_csv('./data_201907~202003/data/adsfjlkgh.csv', encoding='euc-kr')
 
 
-
+# clustering conditions
+def clustering_condition(s, heat_flag, flag_m, time_flag, sense_flag):
+    if s == '민감만/1h제외':
+        if heat_flag == 0 and flag_m == 0 and time_flag == 0 and sense_flag == 1:
+            return True
+        else:
+            return False
+    elif s == '민감만/1h포함':
+        if heat_flag == 0 and flag_m == 0 and sense_flag == 1:
+            return True
+        else:
+            return False
+    elif s == '민감제외/1h제외':
+        if heat_flag == 0 and flag_m == 0 and time_flag == 0 and sense_flag == 0:
+            return True
+        else:
+            return False
+    elif s == '민감제외/1h포함':
+        if heat_flag == 0 and flag_m == 0 and sense_flag == 0:
+            return True
+        else:
+            return False
+    elif s == '전부/1h제외':
+        if heat_flag == 0 and flag_m == 0 and time_flag == 0:
+            return True
+        else:
+            return False
+    elif s == '전부/1h포함':
+        if heat_flag == 0 and flag_m == 0:
+            return True
+        else:
+            return False
+    else:
+        raise NameError("Wrong input")
