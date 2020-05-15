@@ -58,8 +58,8 @@ def find_all(data, change_point, num, start_real, end_real):
         # 가열완료 - 가동종료 사이클
         elif status_dict['furnace'] == 'after_heating_to_end':
             differential_arr = get_diff(WINDOW_DATA, current)
-            print(WINDOW_DATA[current]['TIME'])
-            print(find_change_point_dict)
+            # print(WINDOW_DATA[current]['TIME'])
+            # print(find_change_point_dict)
             if is_work_end(WINDOW_DATA, current, time_dict):
                 work_end(WINDOW_DATA, current, time_dict, phase_list_dict, find_change_point_dict, heating_parameter_dict, status_dict, change_point, i)
             if is_this_point_can_be_a_change_point(differential_arr[0], differential_arr[1]):
@@ -123,7 +123,7 @@ def before_work(WINDOW_DATA, i, current, num, change_point, heating_parameter_di
                 future_data.append(float(WINDOW_DATA[current - TIME_MARGIN + j]['TEMPERATURE']))
             if abs(np.mean(past_data) - np.mean(future_data)) < 1:
                 change_point[i] = WINDOW_DATA[current]['TEMPERATURE']
-                heating_parameter_dict['work_end_index'] = i
+                heating_parameter_dict['heat_end_index'] = i
                 time_dict['heat_ended_time_list'].append(WINDOW_DATA[current]['TIME'])
                 if status_dict['cycle'] == 'door_close':
                     heating_parameter_dict['num_of_door_open'] += 1
