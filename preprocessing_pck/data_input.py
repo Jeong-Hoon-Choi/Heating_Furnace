@@ -1,4 +1,5 @@
 from bases import *
+from constant.constant_data_make import *
 
 
 def get_energy_gas(data, s, num):
@@ -26,6 +27,7 @@ def get_energy_gas(data, s, num):
             gas_off = 1
         else:
             if i < MM and str(ex['D' + str(i + 1)].value) != '-':
+                # 이상하게 가스가 튀는경우 에러처리
                 if float(ex['D' + str(i + 1)].value) > 200:
                     print('error!! : ', temp_time, float(ex['D' + str(i + 1)].value))
                     for k in range(-2, 5):
@@ -144,44 +146,17 @@ def get_heat_steel_part2(ex1, i, i2, arr2):
                      [ex1['AT' + str(i)].value, ex1['AT' + str(i + i2 - 1)].value]])
 
 
-# sensitive_file1
-def sensitive(s):
-    df = pd.read_csv(s, encoding='euc-kr')
-    count = 0
-    list1 = []
-    list2 = []
+# 사내재질의 민감여부
+def sensitive_():
+    df = pd.read_csv(sensitive_path)
+    s_list = []
+    ss_list = []
     for i, row in df.iterrows():
-        if df.loc[i, '민간한 재질'] == 'O' or df.loc[i, '아주 민감한 재질'] == 'O':
-            list1.append(str(df.loc[i, '사내재질']))
-            if df.loc[i, '아주 민감한 재질'] == 'O':
-                list2.append(str(df.loc[i, '사내재질']))
-            # print(i, df.loc[i, '사내재질'])
-            count += 1
-    # print(count)
-    list3 = set(list1)
-    list4 = set(list2)
-    return list1, list2
-
-
-# sensitive_file2
-def sensitive2(s1, s2, s3):
-    df = pd.read_csv(s1, encoding='euc-kr')
-    df2 = pd.read_csv(s2, encoding='euc-kr')
-    df3 = pd.read_csv(s3, encoding='euc-kr')
-    list1 = []
-    list2 = []
-    list3 = []
-    count = 0
-    for i, row in df.iterrows():
-        list1.append(df.loc[i, '사내재질'])
-    for i2, row in df3.iterrows():
-        list3.append(df3.loc[i2, '사내재질'])
-    for i3, row in df2.iterrows():
-        if df2.loc[i3, '사내재질'] not in list3:
-            list2.append(df2.loc[i3, '사내재질'])
-        else:
-            print(df2.loc[i3, '사내재질'])
-            count += 1
-    print(len(list3))
-    print(count)
-    return list1, list2
+        s = df.loc[i, '사내재질']
+        if not pd.isna(df.loc[i, 'Crack민감재질']):
+            if s not in s_list:
+                s_list.append(s)
+        elif not pd.isna(df.loc[i, 'Crack매우민감재질']):
+            if s not in ss_list:
+                ss_list.append(s)
+    return s_list, ss_list

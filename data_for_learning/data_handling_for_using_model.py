@@ -23,7 +23,9 @@ def make_database(data, num, h, phase_list_dict):
             for j in range(heat[i][0] + 1, heat[i][1] + 1):
                 tent_gas2.append(data[j]['GAS'])
         # print(len(heat), i)
-        if data[heat[i][0]]['GAS_OFF'] == 1 or data[heat[i][1]]['GAS_OFF'] == 1 or data[heat[i][0]]['TEMP_OFF'] == 1 or data[heat[i][0]]['TEMP_OFF'] == 1 or heat[i][8] == 0:
+        if data[heat[i][0]]['GAS_OFF'] == 1 or data[heat[i][1]]['GAS_OFF'] == 1 or\
+                data[heat[i][0]]['TEMP_OFF'] == 1 or data[heat[i][0]]['TEMP_OFF'] == 1 or heat[i][8] == 0 or\
+                heat[i][8] is None:
             drop_flag = 1
         h.df = h.df.append(
             pd.DataFrame(data=np.array([[num, data[heat[i][0]]['TIME'], data[heat[i][1]]['TIME'], np.sum(tent_gas),
@@ -384,7 +386,7 @@ def model_reheat(HT, df_mat, s):
 
 
 # make data for heating model
-def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, sn_list, s):
+def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, s):
     to_day = ['월', '화', '수', '목', '금', '토', '일']
     determine_weekend(HT)
     HT.df = HT.df.sort_values(by=['작업일자'], axis=0)
@@ -403,7 +405,7 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, sn_list, 
                  '민감소재장입개수': [], '민감소재중량총합': [], '민감소재최대중량': [],
                  '비민감소재장입개수': [], '비민감소재중량총합': [], '비민감소재최대중량': [],
                  '쉰시간': [], '문열림횟수': [], 'drop': [], '가열로번호': [],
-                 '작업일자': [], '주/야간': [], '가열시작시간': [], '요일': [], '겹침여부': [], '민감여부': [],
+                 '작업일자': [], '주/야간': [], '가열시작시간': [], '요일': [], '겹침여부': [], '민감비고': [],
                  '직전 사이클 소재 수량': [], '겹치는 소재 수량': [], '강종종류': [], '주말여부': [], '에러발생': []}
     print(len(HT.df.index))
     for i in range(len(HT.df.index)):
@@ -482,7 +484,7 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, sn_list, 
                         list_M.append(int(df_mat['투입중량'].loc[j]))
                         if df_mat['사내재질'].loc[j] in ss_list:
                             flag_S = 1
-                        if df_mat['사내재질'].loc[j] in sn_list or pd.isna(df_mat['사내재질'].loc[j]):
+                        if pd.isna(df_mat['사내재질'].loc[j]):
                             flag_S = 2
                             # list_mn[sn_list.index(df_mat['사내재질'].loc[j])] += 1
                         if df_mat['사내재질'].loc[j] in s_list:
@@ -507,7 +509,9 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, sn_list, 
                         break
                 if temp_len_list == len(list_M):
                     flag_E = 1
-            temp_dict['에너지'].append(HT.df['가스사용량(총)'].loc[i])
+            temp_dict['에너지'].append(HT.df['가스사용량'].loc[i])
+            if HT.df['가스사용량'].loc[i] == 0:
+                flag_E = 1
             if len(list_A) != 0 or len(list_HA) != 0:
                 list_kang += 'A'
             if len(list_C) != 0 or len(list_HC) != 0:
@@ -584,10 +588,12 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, sn_list, 
                 temp_dict['drop'].append('강종누락')
             elif flag == 3:
                 temp_dict['drop'].append('전체누락')
-            if flag_S == 2:
-                temp_dict['민감여부'].append(1)
+            if flag_S == 1:
+                temp_dict['민감비고'].append('초민감')
+            elif flag_S == 2:
+                temp_dict['민감비고'].append('민감누락')
             else:
-                temp_dict['민감여부'].append(0)
+                temp_dict['민감비고'].append('이상없음')
             if flag_E == 1:
                 temp_dict['에러발생'].append(1)
             else:
@@ -595,9 +601,6 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, sn_list, 
         print('index :', i)
     df2 = pd.DataFrame.from_dict(temp_dict)
     df2.to_csv(s, encoding='euc-kr')
-    # df_new_2 = pd.DataFrame(data=list_mn)
-    # df_new_2 = df_new_2.reset_index(drop=True)
-    # df_new_2.to_csv('./data_201907~202003/data/adsfjlkgh.csv', encoding='euc-kr')
 
 
 # clustering conditions

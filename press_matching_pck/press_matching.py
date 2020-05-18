@@ -156,9 +156,9 @@ def matching_press_general(heating_furnace_list, p):
         t.df['in'] = '[]'
         t.df['out'] = '[]'
     for i in range(len(p.index)):
-        d = dt.datetime.strptime(p['시작'].loc[i], "%Y-%m-%d %H:%M:%S")
+        d = dt.datetime.strptime(p['공정시작시간'].loc[i], "%Y-%m-%d %H:%M:%S")
         s = p['수주번호'].loc[i]
-        s_1 = p['시리얼번호'].loc[i]
+        s_1 = str(p['시리얼번호'].loc[i])
         for k in range(1, len(heating_furnace_list) + 1):
             par['c'+str(k)] = 0
             par_flag['c' + str(k) + '_flag'] = 0

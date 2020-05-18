@@ -36,7 +36,7 @@ def work_press():
     p = pd.read_csv(base_path + 'data/' + work_space + 'press_par.csv', encoding='euc-kr', index_col=0)
     for i in work_:
         h = HF()
-        h.df.read_csv(base_path + 'HF_OUT/test_2019_a_' + str(i) + '.csv', encoding='euc-kr', index_col=0)
+        h.df = pd.read_csv(base_path + 'HF_OUT/test_2019_a_' + str(i) + '.csv', encoding='euc-kr', index_col=0)
         h.set_next_h()
         h.change_list()
         h_arr.append(h)
@@ -52,10 +52,12 @@ def work_set():
     # for num in error_arr_2019:
     for num in work_:
         h = HF()
-        h.df.read_csv(base_path + 'HF_OUT/press_2019_1a_' + str(num) + '.csv', encoding='euc-kr', index_col=0)
+        h.df = pd.read_csv(base_path + 'HF_OUT/press_2019_1a_' + str(num) + '.csv', encoding='euc-kr', index_col=0)
         # eliminate_error_loop(h, num[1])
         h.match_time(df_t)
+        print('end time matching')
         h.fill()
+        print('end fill items')
         h.week()
         hh.df = pd.concat([hh.df, h.df])
         hh.df = hh.df.reset_index(drop=True)
@@ -75,24 +77,20 @@ def work_set():
         gum_2(h2)
         h2.df.to_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_' + i + '.csv', encoding='euc-kr')
     hh2 = HF()
-    hh2.df.read_csv(base_path + 'HF_OUT/last_2019_ffa' + str(work_[0]) + '.csv', encoding='euc-kr', index_col=0)
+    hh2.df = pd.read_csv(base_path + 'HF_OUT/last_2019_ffa' + str(work_[0]) + '.csv', encoding='euc-kr', index_col=0)
     handle_first_hold(hh2, work_, base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_first_hold.csv')
     hh2.out('./HF_OUT_3/last_2019_' + str(work_[0]) + '_drop_first_hold')
 
 
 # 가열구간 모델용 데이터 만들기
 def make_heat():
-    s_list, ss_list = sensitive('./data1_201909~201912/p15/sensitive.csv')
-    s_list_1, sn_list = sensitive2(base_path + 'data/SS.csv', base_path + 'data/S_N.csv', './data1_201909~201912/p15/sensitive.csv')
-    print(len(s_list), len(s_list_1), len(sn_list))
-    s_list = s_list + s_list_1
-    print(len(s_list))
+    s_list, ss_list = sensitive_()
     df_mat_heat = pd.read_csv(base_path + 'data/heat_steel_par.csv', encoding='euc-kr')
     HT_heat = HF()
-    HT_heat.df.read_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_heat.csv', encoding='euc-kr', index_col=0)
+    HT_heat.df =pd.read_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_heat.csv', encoding='euc-kr', index_col=0)
     HT_heat.df = HT_heat.df.reset_index(drop=True)
     HT_heat.change_list2()
-    model_heat_kang_ver_heat(HT_heat, df_mat, df_mat_heat, s_list, ss_list, sn_list, base_path + '/model5/model_' + str(work_[0]) + '.csv')
+    model_heat_kang_ver_heat(HT_heat, df_mat, df_mat_heat, s_list, ss_list, base_path + '/model/model_' + str(work_[0]) + '.csv')
 
 
 # 호기 분리
@@ -202,7 +200,7 @@ def plot_time_energy():
 
 # clustering
 def furnace_clustering():
-    df = pd.read_csv(base_path + 'model5/model_1.csv', encoding='euc-kr', index_col=0)
+    df = pd.read_csv(base_path + 'model/model_1.csv', encoding='euc-kr', index_col=0)
     for condition in clustering_condition_constant:
         for i in p_bum:
             arr_t = []
@@ -218,7 +216,7 @@ def furnace_clustering():
                         heat_flag = 1
                     if int(df.loc[i2, '민감소재장입개수']) > 0:
                         sense_flag = 1
-                    if int(df.loc[i2, '민감여부']) == 1:
+                    if df.loc[i2, '민감비고'] == '초민감' or df.loc[i2, '민감비고'] == '민감누락' or int(df.loc[i2, '에러발생']) == 1:
                         flag_m = 1
                     if int(df.loc[i2, '시간(총)']) <= 3600:
                         time_flag = 1
@@ -226,19 +224,21 @@ def furnace_clustering():
                         df_t = df_t.append(row)
             df_t = df_t.reset_index(drop=True)
             # df_t.to_csv(base_path + 'analysis/hogi/' + str(i) + '_filtered.csv', encoding='euc-kr')
+            print('-------------------------')
+            print('호기 :', i, ', ', '조건 :', condition)
             print(len(df_t.index))
-            df_t.to_csv(base_path + 'analysis/for_learning5/' + condition + '/' + str(i) + '.csv', encoding='euc-kr')
+            df_t.to_csv(base_path + 'analysis/for_learning/' + condition + '/' + str(i) + '.csv', encoding='euc-kr')
 
 
 # ------------------------------ learning ---------------------------------
 def HF_heating_module():
     epoch = 2000
     seed_start = 10
-    seed_end = 10
+    seed_end = 12
     for i2 in path_1:
         print(i2)
         for i in [p_bum[4]]:
-            df_origin = pd.read_csv('./heating_furnace/heat/data0330/data5/' + str(i2[0]) + '/' + str(i) + '.csv', encoding='euc-kr', index_col=0)
+            df_origin = pd.read_csv(base_path + 'analysis/for_learning/' + str(i2[0]) + '/' + str(i) + '.csv', encoding='euc-kr', index_col=0)
             print(i2, i, '개수', len(df_origin.index))
             df_new = pd.DataFrame()
             for seed1 in range(seed_start, seed_end):
@@ -323,5 +323,6 @@ def HF_heating_module():
                     if not pd.isna(df_new.loc[i01, i0]):
                         arr_avg.append(float(df_new.loc[i01, i0]))
                 print(arr_avg)
-                df_new.loc[seed_end - seed_start - 1, i0] = np.average(arr_avg)
-            df_new.to_csv('./heating_furnace/heat/data0330/result0420_1/' + str(i2[0]) + '/result_' + str(i) + '1.csv', encoding='euc-kr')
+                df_new.loc[seed_end - seed_start, i0] = np.average(arr_avg)
+            df_new = df_new.rename(index={seed_end - seed_start: 'average'})
+            df_new.to_csv(base_path + '/result/' + str(i2[0]) + '/result_' + str(i) + '1.csv', encoding='euc-kr')
