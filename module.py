@@ -325,4 +325,4 @@ def HF_heating_module():
                 print(arr_avg)
                 df_new.loc[seed_end - seed_start, i0] = np.average(arr_avg)
             df_new = df_new.rename(index={seed_end - seed_start: 'average'})
-            df_new.to_csv(base_path + '/result/' + str(i2[0]) + '/result_' + str(i) + '1.csv', encoding='euc-kr')
+            df_new.to_csv(base_path + '/model_result/' + str(i2[0]) + '/result_' + str(i) + '1.csv', encoding='euc-kr')
