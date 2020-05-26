@@ -1,6 +1,10 @@
 from bases import *
 from constant.constant_data_make import *
 
+thr_end = 0
+flag_start = 0
+flag_end = 0
+flag_temp = 0
 
 # Data input,reinforcement, smoothing
 def data_manipulates(data, num, time):
@@ -13,6 +17,15 @@ def data_manipulates(data, num, time):
 
 # change point detection algorithm
 def find_all(data, change_point, num, start_real, end_real):
+
+    global thr_end
+    global flag_start
+    global flag_end
+    global flag_temp
+    thr_end = 0
+    flag_start = 0
+    flag_end = 0
+    flag_temp = 0
 
     # dict of each time list
     time_dict = {'real_start_time_list': start_real, 'real_end_time_list': end_real,
@@ -76,6 +89,9 @@ def find_all(data, change_point, num, start_real, end_real):
                 module_door_close(WINDOW_DATA, current, change_point, i, thr, time_dict, status_dict, heating_parameter_dict, find_change_point_dict, phase_list_dict)
     for i in range(TIME_MARGIN):
         change_point.append(None)
+
+    for j in range(flag_start + 1, flag_end):
+        change_point[j] = None
 
     return time_dict, phase_list_dict
 
@@ -146,6 +162,37 @@ def point_detection_while_heating(WINDOW_DATA, current, change_point, pp_mean, f
         thr = 40
     else:
         thr = 70
+
+    global thr_end
+    global flag_start
+    global flag_end
+    global flag_temp
+    past_data = []
+    future_data = []
+    for j in range(TIME_MARGIN):
+        future_data.append(float(WINDOW_DATA[current + 1 + j]['TEMPERATURE']))
+        past_data.append(float(WINDOW_DATA[current - TIME_MARGIN + j]['TEMPERATURE']))
+    if abs(np.mean(future_data) - np.mean(past_data)) < 1 and WINDOW_DATA[current]['TEMPERATURE'] < thr_end:
+        if flag_start == 0:
+            change_point[i] = WINDOW_DATA[current]['TEMPERATURE']
+            flag_start = i
+            flag_end = i
+            flag_temp = WINDOW_DATA[current]['TEMPERATURE']
+        else:
+            if flag_temp - thr <= WINDOW_DATA[current]['TEMPERATURE'] <= flag_temp + thr:
+                change_point[i] = WINDOW_DATA[current]['TEMPERATURE']
+                if i > flag_end + 3000:
+                    for j in range(flag_start + 1, flag_end):
+                        change_point[j] = None
+                    flag_start = i
+                flag_end = i
+            else:
+                for j in range(flag_start + 1, flag_end):
+                    change_point[j] = None
+                change_point[i] = WINDOW_DATA[current]['TEMPERATURE']
+                flag_start = i
+                flag_end = i
+                flag_temp = WINDOW_DATA[current]['TEMPERATURE']
 
     # 대분류
     categorize(pp_mean, ff_mean, WINDOW_DATA, current, thr, i, time_dict, status_dict, find_change_point_dict)
