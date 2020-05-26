@@ -29,10 +29,15 @@ def plot_heating_flat(df, data, change_point, phase_list_dict):
                     temp = np.mean(tent_tem)
                     time = (end_time - start_time).total_seconds() // 60
 
-                    if abs(end_temp - start_temp) < 10:
-                        field = [start_temp, end_temp, time, gas]
-                        df.loc[dt] = field
-                        dt += 1
+                    # Only for detecting flat / holding phase
+                    # if abs(end_temp - start_temp) < 10:
+                    #     field = [start_temp, end_temp, time, gas]
+                    #     df.loc[dt] = field
+                    #     dt += 1
+
+                    field = [start_temp, end_temp, time, gas]
+                    df.loc[dt] = field
+                    dt += 1
 
                     start_temp = data[j]['TEMPERATURE']
                     end_temp = None
