@@ -29,11 +29,11 @@ def make_database(data, num, h, phase_list_dict):
             drop_flag = 1
         h.df = h.df.append(
             pd.DataFrame(data=np.array([[num, data[heat[i][0]]['TIME'], data[heat[i][1]]['TIME'], np.sum(tent_gas),
-                                         'heat', data[heat[i][2]]['TIME'], data[heat[i][0]]['TEMPERATURE'], heat[i][3],
+                                         'heat', data[heat[i][2]]['TIME'], data[heat[i][0]]['TEMPERATURE'], data[heat[i][1]]['TEMPERATURE'], heat[i][3],
                                          data[heat[i][2]]['TEMPERATURE'], np.sum(tent_gas2), heat[i][4], heat[i][5],
                                          heat[i][6], heat[i][8], data[heat[i][1]]['TEMPERATURE'], i, drop_flag]]),
                          columns=['가열로 번호', '시작시간', '종료시간', '가스사용량(마지막 구간)',
-                                  'Type', '실제 시작시간', '시작온도', '뺄시간',
+                                  'Type', '실제 시작시간', '시작온도', '종료온도', '뺄시간',
                                   '원래시작점온도', '가스사용량', '가열중 문열림 횟수', '가열중 마지막 문닫힌 시간',
                                   '최종 가열시작 온도', '이전 종료시간', '가열완료 온도', 'cycle', 'drop_flag']), sort=True)
         h.df = h.df.reset_index(drop=True)
@@ -393,7 +393,7 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, s):
     HT.df = HT.df.reset_index(drop=True)
     print(HT.df)
     # list_mn = [0]*len(sn_list)
-    temp_dict = {'에너지': [], '시간(총)': [], '시간(0제외)': [], '시작온도': [],
+    temp_dict = {'에너지': [], '시간(총)': [], '시간(0제외)': [], '시작온도': [], '종료온도': [],
                  'A_num': [], 'A_sum': [], 'A_max': [],
                  'C_num': [], 'C_sum': [], 'C_max': [],
                  'S_num': [], 'S_sum': [], 'S_max': [],
@@ -419,6 +419,7 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, s):
             d3 = dt.datetime.strptime(HT.df['이전 종료시간'].loc[i], "%Y-%m-%d %H:%M:%S")
             d0 = int(HT.df['뺄시간'].loc[i]) * 60
             t_start = HT.df['시작온도'].loc[i]
+            t_end = HT.df['종료온도'].loc[i]
             temp_dict['겹치는 소재 수량'].append(HT.df['겹침수량'].loc[i])
             temp_dict['직전 사이클 소재 수량'].append(HT.df['직전 사이클 소재 수량'].loc[i])
             temp_dict['작업일자'].append(HT.df['작업일자'].loc[i])
@@ -426,6 +427,7 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, s):
             temp_dict['가열시작시간'].append(HT.df['시작시간'].loc[i])
             temp_dict['겹침여부'].append(HT.df['겹침여부'].loc[i])
             temp_dict['시작온도'].append(t_start)
+            temp_dict['종료온도'].append(t_end)
             temp_dict['주말여부'].append(HT.df['주말여부'].loc[i])
             temp_dict['요일'].append(to_day[d1.weekday()])
             t = d2 - d1

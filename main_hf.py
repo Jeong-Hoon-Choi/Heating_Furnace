@@ -89,9 +89,81 @@ def summarize_heating_data():
     datas = datas.groupby(pd.cut(datas['시작온도'], bins=bins, labels=labels)).size().reset_index(name='count')
     datas = datas[datas['count'] != 0]
 
-    datas.to_csv(base_path + "HF_OUT/hf_summary.csv", mode='w', encoding='euc-kr')
+    datas.to_csv(base_path + "HF_OUT/hf_summary.csv", mode='w', encoding='euc-kr')\
+
+def HF_heating_learning():
+    epoch = 2000
+    seed_start = 10
+    seed_end = 20
+
+    for i2 in path_1:
+        print(i2)
+        # for i in [p_bum[4]]:
+        for i in p_bum:
+            df_origin = pd.read_csv(base_path + 'analysis/for_learning/' + str(i2[0]) + '/' + str(i) + '.csv',
+                                    encoding='euc-kr', index_col=0)
+            print(i2, i, '개수', len(df_origin.index))
+            df_new = pd.DataFrame()
+            for seed1 in range(seed_start, seed_end):
+                test_pred = {'시간(총)': '', '시간(0제외)': '', '에너지': '', '시간(총)_mape': '', '시간(0제외)_mape': '',
+                             '에너지_mape': ''}
+                train_pred = {'시간(총)': '', '시간(0제외)': '', '에너지': '', '시간(총)_mape': '', '시간(0제외)_mape': '',
+                              '에너지_mape': ''}
+                x, y = Train_Test_split(df_origin, seed1)
+                for j2 in feature_list_0325_2:
+                    for j in j2:
+                        out = []
+                        out2 = []
+                        train_feature, train_label, test_feature, test_label = \
+                            data_manipulate_normal3(x, y, j[0], j[1], j[2], seed1)
+                        # data_manipulate_no_split(df_origin, j[0], j[1])
+                        # data_manipulate_pca(origin2, j[0], j[1], seed1)
+                        print(train_feature)
+                        train_label = train_label.reset_index(drop=True)
+                        test_label = test_label.reset_index(drop=True)
+
+                        # KNN
+                        knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature, train_label, test_feature,
+                                                                    test_label)
+                        result = mean_absolute_percentage_error(train_label, knn_train_pred)
+                        result2 = mean_absolute_percentage_error(test_label, knn_test_pred)
+                        out2.append(mean_absolute_percentage_error(test_label, knn_test_pred))
+
+                        # MLP
+                        for hidden, unit in [[5, 5]]:
+                            print('seed : ', seed1, 'epoch : ', epoch, 'unit : ', unit, 'hidden : ', hidden)
+                            s1, mlp_test_pred, mlp_train_pred, model = MLP(train_feature, train_label, test_feature,
+                                                                           test_label, epoch=epoch, unit=unit,
+                                                                           hidden=hidden)
+                            train_pred[j[0]] = mlp_train_pred
+                            test_pred[j[0]] = mlp_test_pred
+                            out.append(s1)
+                            df_new.loc[
+                                seed1 - seed_start, j[3] + '_MLP_' + str(hidden) + '_' + str(unit) + '_' + j[0]] = out[
+                                len(out) - 1]
+
+                        df_new.loc[seed1 - seed_start, j[3] + '_KNN_' + str(hidden) + '_' + str(unit) + '_' + j[0]] = \
+                        out2[len(out2) - 1]
+
+            for i0 in df_new.columns:
+                print(i0)
+                arr_avg = []
+                for i01, ro2 in df_new.iterrows():
+                    if not pd.isna(df_new.loc[i01, i0]):
+                        arr_avg.append(float(df_new.loc[i01, i0]))
+                print(arr_avg)
+                df_new.loc[seed_end - seed_start, i0] = np.average(arr_avg)
+            df_new = df_new.rename(index={seed_end - seed_start: 'average'})
+            df_new.to_csv(base_path + 'model_result/' + str(i2[0]) + '/result_' + str(i) + '1.csv', encoding='euc-kr')
 
 if __name__ == '__main__':
-    plot_heating_data()
+    # plot_heating_data()
     # summarize_heating_data()
+
+    # work_start(view=False)
+    # work_press()
+    # work_set()
+    # make_heat()
+    # furnace_clustering()
+    HF_heating_learning()
 

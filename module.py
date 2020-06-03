@@ -79,7 +79,7 @@ def work_set():
     hh2 = HF()
     hh2.df = pd.read_csv(base_path + 'HF_OUT/last_2019_ffa' + str(work_[0]) + '.csv', encoding='euc-kr', index_col=0)
     handle_first_hold(hh2, work_, base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_first_hold.csv')
-    hh2.out('./HF_OUT_3/last_2019_' + str(work_[0]) + '_drop_first_hold')
+    hh2.out(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_drop_first_hold')
 
 
 # 가열구간 모델용 데이터 만들기
@@ -87,7 +87,7 @@ def make_heat():
     s_list, ss_list = sensitive_()
     df_mat_heat = pd.read_csv(base_path + 'data/heat_steel_par.csv', encoding='euc-kr')
     HT_heat = HF()
-    HT_heat.df =pd.read_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_heat.csv', encoding='euc-kr', index_col=0)
+    HT_heat.df = pd.read_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_heat.csv', encoding='euc-kr', index_col=0)
     HT_heat.df = HT_heat.df.reset_index(drop=True)
     HT_heat.change_list2()
     model_heat_kang_ver_heat(HT_heat, df_mat, df_mat_heat, s_list, ss_list, base_path + '/model/model_' + str(work_[0]) + '.csv')
@@ -234,10 +234,11 @@ def furnace_clustering():
 def HF_heating_module():
     epoch = 2000
     seed_start = 10
-    seed_end = 12
+    seed_end = 20
     for i2 in path_1:
         print(i2)
-        for i in [p_bum[4]]:
+        # for i in [p_bum[4]]:
+        for i in p_bum:
             df_origin = pd.read_csv(base_path + 'analysis/for_learning/' + str(i2[0]) + '/' + str(i) + '.csv', encoding='euc-kr', index_col=0)
             print(i2, i, '개수', len(df_origin.index))
             df_new = pd.DataFrame()
@@ -325,4 +326,4 @@ def HF_heating_module():
                 print(arr_avg)
                 df_new.loc[seed_end - seed_start, i0] = np.average(arr_avg)
             df_new = df_new.rename(index={seed_end - seed_start: 'average'})
-            df_new.to_csv(base_path + '/model_result/' + str(i2[0]) + '/result_' + str(i) + '1.csv', encoding='euc-kr')
+            df_new.to_csv(base_path + 'model_result/' + str(i2[0]) + '/result_' + str(i) + '1.csv', encoding='euc-kr')
