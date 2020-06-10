@@ -2,29 +2,55 @@ from module import *
 import pandas as pd
 
 
-def plot_holding_temperatures(num, df, data, change_point, time_dict, phase_list_dict):
-    # hold = phase_list_dict['hold']
-    # dt = len(df.index)
-    # for i in range(len(hold)):
-    #     drop_flag = 0
-    #     tent_gas = []
-    #     tent_tem = []
-    #     for j in range(hold[i][0] + 1, hold[i][1] + 1):
-    #         tent_gas.append(data[j]['GAS'])
-    #     for k in range(hold[i][0], hold[i][1] + 1):
-    #         tent_tem.append(data[k]['TEMPERATURE'])
-    #     start = data[hold[i][0]]['TEMPERATURE']
-    #     end = data[hold[i][1]]['TEMPERATURE']
-    #     if data[hold[i][0]]['GAS_OFF'] == 1 or data[hold[i][1]]['GAS_OFF'] == 1 or data[hold[i][0]]['TEMP_OFF'] == 1 or data[hold[i][1]]['TEMP_OFF'] == 1:
-    #         drop_flag = 1
-    #     # print(len(hold), i)
-    #     field = [num, data[hold[i][0]]['TIME'], start, data[hold[i][1]]['TIME'], end, np.mean(tent_tem), np.sum(tent_gas)]
-    #     df.loc[dt] = field
-    #     dt += 1
+def plot_heating_flat(num, df, data, change_point, phase_list_dict):
+    heat = phase_list_dict['heat']
+    dt = len(df.index)
+    for i in range(len(heat)):
+        start = None
+        end = None
+        tent_gas = []
+        tent_tem = []
+        for j in range(heat[i][0], heat[i][1] + 1):
+            # test = change_point[hold[i][0]:hold[i][1]+1]
+            if heat[i][0] == heat[i][1]:
+                continue
 
+            if change_point[j] != None:
+                if start == None:
+                    start = j
+                    tent_gas.append(data[j]['GAS'])
+                    tent_tem.append(data[j]['TEMPERATURE'])
+                else:
+                    end = j
+                    tent_gas.append(data[j]['GAS'])
+                    tent_tem.append(data[j]['TEMPERATURE'])
+
+                    # Only for detecting flat / holding period
+                    if abs(data[end]['TEMPERATURE'] - data[start]['TEMPERATURE']) < 50:
+                        field = [num, data[start]['TIME'], data[start]['TEMPERATURE'], data[end]['TIME'],
+                                 data[end]['TEMPERATURE'], np.mean(tent_tem), np.sum(tent_gas)]
+                        df.loc[dt] = field
+                        dt += 1
+
+                    # For getting all data
+                    # field = [num, data[start]['TIME'], data[start]['TEMPERATURE'], data[end]['TIME'],
+                    #          data[end]['TEMPERATURE'], np.mean(tent_tem), np.sum(tent_gas)]
+                    # df.loc[dt] = field
+                    # dt += 1
+
+                    start = j
+                    end = None
+                    tent_gas = []
+                    tent_tem = []
+            else:
+                if start != None:
+                    tent_gas.append(data[j]['GAS'])
+                    tent_tem.append(data[j]['TEMPERATURE'])
+
+
+def plot_holding_temperatures(num, df, data, time_dict):
     dt = len(df.index)
     for i in range(len(time_dict['heat_ended_time_list'])):
-        drop_flag = 0
         tent_gas = []
         tent_tem = []
         start = None
@@ -41,73 +67,20 @@ def plot_holding_temperatures(num, df, data, change_point, time_dict, phase_list
             tent_gas.append(data[j]['GAS'])
         for k in range(start, end + 1):
             tent_tem.append(data[k]['TEMPERATURE'])
-        start_temp = data[start]['TEMPERATURE']
-        end_temp = data[end]['TEMPERATURE']
-        if data[start]['GAS_OFF'] == 1 or data[end]['GAS_OFF'] == 1 or data[start]['TEMP_OFF'] == 1 or data[end]['TEMP_OFF'] == 1:
-            drop_flag = 1
         # print(len(hold), i)
-        field = [num, data[start]['TIME'], start_temp, data[end]['TIME'], end_temp, np.mean(tent_tem), np.sum(tent_gas)]
+        field = [num, data[start]['TIME'], data[start]['TEMPERATURE'], data[end]['TIME'], data[end]['TEMPERATURE'], np.mean(tent_tem), np.sum(tent_gas)]
         df.loc[dt] = field
         dt += 1
 
 
-def plot_heating_flat(num, df, data, change_point, phase_list_dict):
-    heat = phase_list_dict['heat']
-    dt = 0
-    for i in range(len(heat)):
-        start_temp = None
-        end_temp = None
-        start_time = None
-        end_time = None
-        tent_gas = []
-        tent_tem = []
-        for j in range(heat[i][0], heat[i][1] + 1):
-            # test = change_point[hold[i][0]:hold[i][1]+1]
-            if change_point[j] != None:
-                if start_temp == None:
-                    start_temp = data[j]['TEMPERATURE']
-                    start_time = data[j]['TIME']
-                    tent_gas.append(data[j]['GAS'])
-                    tent_tem.append(data[j]['TEMPERATURE'])
-                else:
-                    end_temp = data[j]['TEMPERATURE']
-                    end_time = data[j]['TIME']
-                    tent_gas.append(data[j]['GAS'])
-                    tent_tem.append(data[j]['TEMPERATURE'])
-                    gas = np.sum(tent_gas)
-                    temp = np.mean(tent_tem)
-                    time = (end_time - start_time).total_seconds() // 60
-
-                    # Only for detecting flat / holding phase
-                    # if abs(end_temp - start_temp) < 10:
-                    #     field = [num, start_temp, end_temp, time, gas]
-                    #     df.loc[dt] = field
-                    #     dt += 1
-
-                    field = [num, start_temp, end_temp, time, gas]
-                    df.loc[dt] = field
-                    dt += 1
-
-                    start_temp = data[j]['TEMPERATURE']
-                    end_temp = None
-                    tent_gas = []
-                    tent_tem = []
-                    # tent_gas.append(data[j]['GAS'])
-                    # tent_tem.append(data[j]['TEMPERATURE'])
-            else:
-                if start_temp != None:
-                    tent_gas.append(data[j]['GAS'])
-                    tent_tem.append(data[j]['TEMPERATURE'])
-
-
-def divide_data():
+def get_data():
     # Heating data
-    # df = pd.DataFrame(columns=['가열로 번호', '시작온도', '종료온도', '총시간', '가스사용량'])
-    # df.reset_index(drop=True)
+    df = pd.DataFrame(columns=['가열로 번호', '시작시간', '시작온도', '종료시간', '종료온도', '평균온도', '가스사용량'])
+    df.reset_index(drop=True)
 
     # Holding data
-    df2 = pd.DataFrame(columns=['가열로 번호', '시작시간', '시작온도', '종료시간', '종료온도', '평균온도', '가스사용량'])
-    df2.reset_index(drop=True)
+    # df2 = pd.DataFrame(columns=['가열로 번호', '시작시간', '시작온도', '종료시간', '종료온도', '평균온도', '가스사용량'])
+    # df2.reset_index(drop=True)
     for num in work_:
         data = []
         change_point = []
@@ -118,15 +91,15 @@ def divide_data():
         start_real, end_real = fc.data_manipulates(data, num, time_path)
         time_dict, phase_list_dict = fc.find_all(data, change_point, num, start_real, end_real)
         # Heating data
-        # plot_heating_flat(num, df, data, change_point, phase_list_dict)
+        plot_heating_flat(num, df, data, change_point, phase_list_dict)
 
         # Holding data
-        plot_holding_temperatures(num, df2, data, change_point, time_dict, phase_list_dict)
+        # plot_holding_temperatures(num, df2, data, time_dict)
     # Heating data
-    # df.to_csv(base_path + "HF_OUT/hf_heating.csv", mode='w', encoding='euc-kr')
+    df.to_csv(base_path + "HF_OUT/hf_heating.csv", mode='w', encoding='euc-kr')
 
     # Holding data
-    df2.to_csv(base_path + "HF_OUT/hf_holding_summary.csv", mode='w', encoding='euc-kr')
+    # df2.to_csv(base_path + "HF_OUT/hf_holding_summary.csv", mode='w', encoding='euc-kr')
 
 
 def summarize_heating_data():
@@ -286,7 +259,7 @@ def HF_heating_learning():
 
 
 if __name__ == '__main__':
-    # divide_data()
+    # get_data()
     # summarize_heating_data()
 
     plot_heating_data(view=False)
