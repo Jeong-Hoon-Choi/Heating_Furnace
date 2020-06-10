@@ -60,15 +60,15 @@ class HF:
         temp = self.index_h_next
         if self.flag_end == 0:
             while 1:
+                if temp == len(self.df.index) - 1:
+                    self.flag_end = 1
+                    break
                 if temp < len(self.df.index) - 1:
-                    temp += 1
                     if self.df['Type'].loc[temp] == 'heat':
                         break
                     else:
                         pass
-                if temp == len(self.df.index) - 1:
-                    self.flag_end = 1
-                    break
+                    temp += 1
             self.index_h_next = temp
         else:
             pass

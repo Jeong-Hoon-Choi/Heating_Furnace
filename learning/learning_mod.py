@@ -4,17 +4,14 @@ from constant.constant_data_make import *
 from constant.constant_learning import *
 import matplotlib.pyplot as plt
 from learning.ffn import FFN
-from sklearn.utils import check_array
 from sklearn import preprocessing
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics.scorer import make_scorer
 from sklearn.neighbors import KNeighborsRegressor
-from sklearn.model_selection import KFold
-from sklearn.model_selection import cross_val_score
-from scipy.spatial import distance
 from sklearn import ensemble
+from sklearn.tree import DecisionTreeRegressor
 
 
 # MAPE
@@ -46,6 +43,19 @@ def MLP(train_feature, train_label, test_feature, test_label, epoch=2000, unit=3
     score, test_pred, m = model_F.run()
     train_pred = m.predict(x=train_feature)
     return score, test_pred, train_pred, m
+
+
+# Decision Tree
+def decision_tree_reg(train_feature, train_label, test_feature, test_label):
+    print(len(train_feature), len(test_feature), len(train_label), len(test_label))
+
+    my_scorer = make_scorer(mean_absolute_percentage_error, greater_is_better=False)
+    optimize = GridSearchCV(DecisionTreeRegressor(random_state=0), param_grid={}, scoring=my_scorer, cv=5)
+    optimize.fit(train_feature, train_label)
+    print("best : ", optimize.best_params_)
+    score = optimize.score(test_feature, test_label)
+    print("test score : ", score)
+    return optimize.predict(test_feature), optimize.predict(train_feature), optimize.best_params_
 
 
 # random forest _ not used

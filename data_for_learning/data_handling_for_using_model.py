@@ -24,7 +24,7 @@ def make_database(data, num, h, phase_list_dict):
                 tent_gas2.append(data[j]['GAS'])
         # print(len(heat), i)
         if data[heat[i][0]]['GAS_OFF'] == 1 or data[heat[i][1]]['GAS_OFF'] == 1 or\
-                data[heat[i][0]]['TEMP_OFF'] == 1 or data[heat[i][0]]['TEMP_OFF'] == 1 or heat[i][8] == 0 or\
+                data[heat[i][0]]['TEMP_OFF'] == 1 or data[heat[i][1]]['TEMP_OFF'] == 1 or heat[i][8] == 0 or\
                 heat[i][8] is None:
             drop_flag = 1
         h.df = h.df.append(
@@ -53,6 +53,167 @@ def make_database(data, num, h, phase_list_dict):
             pd.DataFrame(data=np.array(
                 [[num, data[hold[i][0]]['TIME'], data[hold[i][1]]['TIME'], np.sum(tent_gas), 'hold', np.mean(tent_tem), drop_flag]]),
                          columns=['가열로 번호', '시작시간', '종료시간', '가스사용량', 'Type', '평균온도', 'drop_flag']), sort=True)
+        h.df = h.df.reset_index(drop=True)
+    # open
+    for i in range(len(op_en)):
+        drop_flag = 0
+        tent_gas = []
+        for j in range(op_en[i][0] + 1, op_en[i][1] + 1):
+            tent_gas.append(data[j]['GAS'])
+        if data[op_en[i][0]]['GAS_OFF'] == 1 or data[op_en[i][1]]['GAS_OFF'] == 1 or data[op_en[i][0]]['TEMP_OFF'] == 1 or data[op_en[i][1]]['TEMP_OFF'] == 1:
+            drop_flag = 1
+        # print(len(op_en), i)
+        h.df = h.df.append(
+            pd.DataFrame(data=np.array([[num, data[op_en[i][0]]['TIME'], data[op_en[i][1]]['TIME'],
+                                         np.sum(tent_gas), 'open', data[op_en[i][0]]['TEMPERATURE'], data[op_en[i][1]]['TEMPERATURE'], drop_flag]]),
+                         columns=['가열로 번호', '시작시간', '종료시간', '가스사용량', 'Type', '시작온도', '종료온도', 'drop_flag']), sort=True)
+        h.df = h.df.reset_index(drop=True)
+    # close
+    for i in range(len(op_en)):
+        drop_flag = 0
+        tent_gas = []
+        time_out = 0
+        for j in range(op_en[i][1] + 1, op_en[i][2] + 1):
+            tent_gas.append(data[j]['GAS'])
+            if int(data[j]['GAS']) == 0 and data[j]['GAS_OFF'] == 0:
+                time_out += 1
+        if data[op_en[i][1]]['GAS_OFF'] == 1 or data[op_en[i][2]]['GAS_OFF'] == 1 or data[op_en[i][1]]['TEMP_OFF'] == 1 or data[op_en[i][2]]['TEMP_OFF'] == 1:
+            drop_flag = 1
+        # print(len(op_en), i)
+        h.df = h.df.append(
+            pd.DataFrame(data=np.array(
+                [[num, data[op_en[i][1]]['TIME'], data[op_en[i][2]]['TIME'], np.sum(tent_gas), 'reheat', data[op_en[i][1]]['TEMPERATURE'], drop_flag, time_out]]),
+                         columns=['가열로 번호', '시작시간', '종료시간', '가스사용량', 'Type', '시작온도', 'drop_flag', '뺄시간']), sort=True)
+        h.df = h.df.reset_index(drop=True)
+    # display(df)
+    # df.to_csv("test_201901_2.csv", mode='w', encoding='euc-kr')
+
+
+# make furnace's data - Steven
+def make_database2(data, num, h, change_point, phase_list_dict):
+    op_en = phase_list_dict['open']
+    heat = phase_list_dict['heat']
+    hold = phase_list_dict['hold']
+    # df = pd.DataFrame(columns=['가열로 번호', '시작시간', '종료시간', '가스사용량', 'Type'])
+    # heat
+    for i in range(len(heat)):
+        first_section = None
+        start = None
+        end = None
+        drop_flag = 0
+        tent_gas = []
+        tent_gas2 = []
+        if heat[i][7] is not None:
+            first_section = heat[i][7]
+        for j in range(heat[i][0], heat[i][1] + 1):
+            # test = change_point[hold[i][0]:hold[i][1]+1]
+            if heat[i][0] == heat[i][1]:
+                tent_gas.append(data[j]['GAS'])
+                tent_gas2.append(data[j]['GAS'])
+                if data[heat[i][0]]['GAS_OFF'] == 1 or data[heat[i][1]]['GAS_OFF'] == 1 or \
+                        data[heat[i][0]]['TEMP_OFF'] == 1 or data[heat[i][1]]['TEMP_OFF'] == 1 or heat[i][8] == 0 or \
+                        heat[i][8] is None:
+                    drop_flag = 1
+                h.df = h.df.append(
+                    pd.DataFrame(
+                        data=np.array([[num, data[heat[i][0]]['TIME'], data[heat[i][1]]['TIME'], np.sum(tent_gas),
+                                        'heat', data[heat[i][2]]['TIME'], data[heat[i][0]]['TEMPERATURE'],
+                                        data[heat[i][1]]['TEMPERATURE'], heat[i][3],
+                                        data[heat[i][2]]['TEMPERATURE'], np.sum(tent_gas2), heat[i][4], heat[i][5],
+                                        heat[i][6], heat[i][8], data[heat[i][1]]['TEMPERATURE'], i, drop_flag]]),
+                        columns=['가열로 번호', '시작시간', '종료시간', '가스사용량(마지막 구간)',
+                                 'Type', '실제 시작시간', '시작온도', '종료온도', '뺄시간',
+                                 '원래시작점온도', '가스사용량', '가열중 문열림 횟수', '가열중 마지막 문닫힌 시간',
+                                 '최종 가열시작 온도', '이전 종료시간', '가열완료 온도', 'cycle', 'drop_flag']), sort=True)
+                h.df = h.df.reset_index(drop=True)
+                break
+
+            if change_point[j] != None:
+                if start == None:
+                    start = j
+                    tent_gas.append(data[j]['GAS'])
+                else:
+                    end = j
+                    tent_gas.append(data[j]['GAS'])
+
+                    if first_section is not None:
+                        for k in range(first_section, end):
+                            tent_gas2.append(data[k]['GAS'])
+                        first_section = None
+                    else:
+                        tent_gas2 = tent_gas
+
+                    if data[start]['GAS_OFF'] == 1 or data[end]['GAS_OFF'] == 1 or \
+                            data[start]['TEMP_OFF'] == 1 or data[end]['TEMP_OFF'] == 1 or heat[i][8] == 0 or \
+                            heat[i][8] is None:
+                        drop_flag = 1
+                    if data[end]['TEMPERATURE'] - data[start]['TEMPERATURE'] >= 10:
+                        h.df = h.df.append(
+                            pd.DataFrame(
+                                data=np.array([[num, data[start]['TIME'], data[end]['TIME'], np.sum(tent_gas),
+                                                'heat', data[heat[i][2]]['TIME'], data[start]['TEMPERATURE'],
+                                                data[end]['TEMPERATURE'], heat[i][3],
+                                                data[heat[i][2]]['TEMPERATURE'], np.sum(tent_gas2), heat[i][4], heat[i][5],
+                                                heat[i][6], heat[i][8], data[end]['TEMPERATURE'], i, drop_flag]]),
+                                columns=['가열로 번호', '시작시간', '종료시간', '가스사용량(마지막 구간)',
+                                         'Type', '실제 시작시간', '시작온도', '종료온도', '뺄시간',
+                                         '원래시작점온도', '가스사용량', '가열중 문열림 횟수', '가열중 마지막 문닫힌 시간',
+                                         '최종 가열시작 온도', '이전 종료시간', '가열완료 온도', 'cycle', 'drop_flag']), sort=True)
+                        h.df = h.df.reset_index(drop=True)
+
+                    start = j
+                    end = None
+                    tent_gas = []
+                    tent_gas2 = []
+            else:
+                if start != None:
+                    tent_gas.append(data[j]['GAS'])
+
+
+        # Steven - heat[i][7] = heating_parameter_dict['heat_start_index']
+        # if heat[i][7] is None:
+        #     for j in range(heat[i][0] + 1, heat[i][1] + 1):
+        #         tent_gas.append(data[j]['GAS'])
+        #     for j in range(heat[i][0] + 1, heat[i][1] + 1):
+        #         tent_gas2.append(data[j]['GAS'])
+        # else:
+        #     for j in range(heat[i][7] + 1, heat[i][1] + 1):
+        #         tent_gas.append(data[j]['GAS'])
+        #     for j in range(heat[i][0] + 1, heat[i][1] + 1):
+        #         tent_gas2.append(data[j]['GAS'])
+        # # print(len(heat), i)
+        # if data[heat[i][0]]['GAS_OFF'] == 1 or data[heat[i][1]]['GAS_OFF'] == 1 or\
+        #         data[heat[i][0]]['TEMP_OFF'] == 1 or data[heat[i][0]]['TEMP_OFF'] == 1 or heat[i][8] == 0 or\
+        #         heat[i][8] is None:
+        #     drop_flag = 1
+        # h.df = h.df.append(
+        #     pd.DataFrame(data=np.array([[num, data[heat[i][0]]['TIME'], data[heat[i][1]]['TIME'], np.sum(tent_gas),
+        #                                  'heat', data[heat[i][2]]['TIME'], data[heat[i][0]]['TEMPERATURE'], data[heat[i][1]]['TEMPERATURE'], heat[i][3],
+        #                                  data[heat[i][2]]['TEMPERATURE'], np.sum(tent_gas2), heat[i][4], heat[i][5],
+        #                                  heat[i][6], heat[i][8], data[heat[i][1]]['TEMPERATURE'], i, drop_flag]]),
+        #                  columns=['가열로 번호', '시작시간', '종료시간', '가스사용량(마지막 구간)',
+        #                           'Type', '실제 시작시간', '시작온도', '종료온도', '뺄시간',
+        #                           '원래시작점온도', '가스사용량', '가열중 문열림 횟수', '가열중 마지막 문닫힌 시간',
+        #                           '최종 가열시작 온도', '이전 종료시간', '가열완료 온도', 'cycle', 'drop_flag']), sort=True)
+        # h.df = h.df.reset_index(drop=True)
+    # hold
+    for i in range(len(hold)):
+        drop_flag = 0
+        tent_gas = []
+        tent_tem = []
+        for j in range(hold[i][0] + 1, hold[i][1] + 1):
+            tent_gas.append(data[j]['GAS'])
+        for k in range(hold[i][0], hold[i][1] + 1):
+            tent_tem.append(data[k]['TEMPERATURE'])
+        start = data[hold[i][0]]['TEMPERATURE']
+        end = data[hold[i][1]]['TEMPERATURE']
+        if data[hold[i][0]]['GAS_OFF'] == 1 or data[hold[i][1]]['GAS_OFF'] == 1 or data[hold[i][0]]['TEMP_OFF'] == 1 or data[hold[i][1]]['TEMP_OFF'] == 1:
+            drop_flag = 1
+        # print(len(hold), i)
+        h.df = h.df.append(
+            pd.DataFrame(data=np.array(
+                [[num, data[hold[i][0]]['TIME'], data[hold[i][1]]['TIME'], np.sum(tent_gas), 'hold', np.mean(tent_tem), drop_flag, start, end]]),
+                         columns=['가열로 번호', '시작시간', '종료시간', '가스사용량', 'Type', '평균온도', 'drop_flag', '시작온도', '종료온도']), sort=True)
         h.df = h.df.reset_index(drop=True)
     # open
     for i in range(len(op_en)):
