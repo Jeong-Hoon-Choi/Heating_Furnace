@@ -26,7 +26,9 @@ def plot_heating_flat(num, df, data, change_point, phase_list_dict):
                     tent_tem.append(data[j]['TEMPERATURE'])
 
                     # Only for detecting flat / holding period
-                    if abs(data[end]['TEMPERATURE'] - data[start]['TEMPERATURE']) < 50:
+                    time_diff = data[end]['TIME'] - data[start]['TIME']
+                    time_diff = time_diff.total_seconds()/60
+                    if abs(data[end]['TEMPERATURE'] - data[start]['TEMPERATURE']) < 50 and time_diff > 30:
                         field = [num, data[start]['TIME'], data[start]['TEMPERATURE'], data[end]['TIME'],
                                  data[end]['TEMPERATURE'], np.mean(tent_tem), np.sum(tent_gas)]
                         df.loc[dt] = field
@@ -74,11 +76,11 @@ def plot_holding_temperatures(num, df, data, time_dict):
 
 
 def get_data():
-    # Heating data
+    # Heating phase data
     df = pd.DataFrame(columns=['가열로 번호', '시작시간', '시작온도', '종료시간', '종료온도', '평균온도', '가스사용량'])
     df.reset_index(drop=True)
 
-    # Holding data
+    # Holding phase data
     # df2 = pd.DataFrame(columns=['가열로 번호', '시작시간', '시작온도', '종료시간', '종료온도', '평균온도', '가스사용량'])
     # df2.reset_index(drop=True)
     for num in work_:
@@ -90,15 +92,15 @@ def get_data():
             get_data_excel(data, path, num)
         start_real, end_real = fc.data_manipulates(data, num, time_path)
         time_dict, phase_list_dict = fc.find_all(data, change_point, num, start_real, end_real)
-        # Heating data
+        # Heating phase data
         plot_heating_flat(num, df, data, change_point, phase_list_dict)
 
-        # Holding data
+        # Holding phase data
         # plot_holding_temperatures(num, df2, data, time_dict)
-    # Heating data
+    # Heating phase data
     df.to_csv(base_path + "HF_OUT/hf_heating.csv", mode='w', encoding='euc-kr')
 
-    # Holding data
+    # Holding phase data
     # df2.to_csv(base_path + "HF_OUT/hf_holding_summary.csv", mode='w', encoding='euc-kr')
 
 
@@ -148,7 +150,7 @@ def work_press2():
     for i in work_:
         h = HF()
         h.df = pd.read_csv(base_path + 'HF_OUT/hf_2019_' + str(i) + '.csv', encoding='euc-kr', index_col=0)
-        h.set_next_h()
+        h.set_next_h_2()
         h.change_list()
         h_arr.append(h)
     pm.matching_press_general(h_arr, p)
@@ -166,16 +168,17 @@ def work_set2():
         h.df = pd.read_csv(base_path + 'HF_OUT/press_2019_' + str(num) + '.csv', encoding='euc-kr', index_col=0)
         # eliminate_error_loop(h, num[1])
         h.match_time(df_t)
-        print('end time matching')
+        print(str(num), '- end time matching')
         h.fill()
-        print('end fill items')
+        print(str(num), '- end fill items')
         h.week()
         hh.df = pd.concat([hh.df, h.df])
         hh.df = hh.df.reset_index(drop=True)
     eliminate_drop(hh)
     hh.out(base_path + 'HF_OUT/last_2019_ffa')
     print('phase 2')
-    hhh = ['heat', 'hold', 'open', 'reheat']
+    # hhh = ['heat', 'hold', 'open', 'reheat']
+    hhh = ['hold']
     for i in hhh:
         print(i)
         h2 = HF()
@@ -185,7 +188,7 @@ def work_set2():
             else:
                 pass
         h2.df = h2.df.reset_index(drop=True)
-        gum_2(h2)
+        gum_22(h2)
         h2.df.to_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_' + i + '.csv', encoding='euc-kr')
     hh2 = HF()
     hh2.df = pd.read_csv(base_path + 'HF_OUT/last_2019_ffa' + str(work_[0]) + '.csv', encoding='euc-kr', index_col=0)
@@ -194,7 +197,7 @@ def work_set2():
 
 
 def HF_heating_learning():
-    epoch = 3000
+    epoch = 2000
     seed_start = 10
     seed_end = 20
 
@@ -221,10 +224,6 @@ def HF_heating_learning():
                         train_label = train_label.reset_index(drop=True)
                         test_label = test_label.reset_index(drop=True)
 
-                        # KNN
-                        knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature, train_label, test_feature, test_label)
-                        out2.append(mean_absolute_percentage_error(test_label, knn_test_pred))
-
                         # MLP
                         for hidden, unit in [[5, 5]]:
                             print('seed : ', seed1, 'epoch : ', epoch, 'unit : ', unit, 'hidden : ', hidden)
@@ -236,15 +235,19 @@ def HF_heating_learning():
                                 seed1 - seed_start, j[3] + '_MLP_' + str(hidden) + '_' + str(unit) + '_' + j[0]] = out[
                                 len(out) - 1]
 
+                        # KNN
+                        knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature, train_label, test_feature, test_label)
+                        out2.append(mean_absolute_percentage_error(test_label, knn_test_pred))
+
                         df_new.loc[seed1 - seed_start, j[3] + '_KNN_' + str(hidden) + '_' + str(unit) + '_' + j[0]] = \
                         out2[len(out2) - 1]
 
                         # Decision Tree
-                        decision_tree_test_pred, decision_tree_train_pred, dt1 = decision_tree_reg(train_feature, train_label, test_feature, test_label)
-                        out3.append(mean_absolute_percentage_error(test_label, decision_tree_test_pred))
+                        # decision_tree_test_pred, decision_tree_train_pred, dt1 = decision_tree_reg(train_feature, train_label, test_feature, test_label)
+                        # out3.append(mean_absolute_percentage_error(test_label, decision_tree_test_pred))
 
-                        df_new.loc[seed1 - seed_start, j[3] + '_DTREE_' + str(hidden) + '_' + str(unit) + '_' + j[0]] = \
-                        out3[len(out3) - 1]
+                        # df_new.loc[seed1 - seed_start, j[3] + '_DTREE_' + str(hidden) + '_' + str(unit) + '_' + j[0]] = \
+                        # out3[len(out3) - 1]
 
             for i0 in df_new.columns:
                 print(i0)
@@ -262,10 +265,10 @@ if __name__ == '__main__':
     # get_data()
     # summarize_heating_data()
 
-    plot_heating_data(view=False)
+    # plot_heating_data(view=False)
     # work_press2()
     # work_set2()
     # make_heat()
     # furnace_clustering()
-    # HF_heating_learning()
+    HF_heating_learning()
 

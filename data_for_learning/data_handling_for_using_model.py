@@ -103,36 +103,75 @@ def make_database2(data, num, h, change_point, phase_list_dict):
         drop_flag = 0
         tent_gas = []
         tent_gas2 = []
+
         if heat[i][7] is not None:
             first_section = heat[i][7]
-        for j in range(heat[i][0], heat[i][1] + 1):
-            # test = change_point[hold[i][0]:hold[i][1]+1]
-            if heat[i][0] == heat[i][1]:
-                tent_gas.append(data[j]['GAS'])
-                tent_gas2.append(data[j]['GAS'])
-                if data[heat[i][0]]['GAS_OFF'] == 1 or data[heat[i][1]]['GAS_OFF'] == 1 or \
-                        data[heat[i][0]]['TEMP_OFF'] == 1 or data[heat[i][1]]['TEMP_OFF'] == 1 or heat[i][8] == 0 or \
-                        heat[i][8] is None:
-                    drop_flag = 1
-                h.df = h.df.append(
-                    pd.DataFrame(
-                        data=np.array([[num, data[heat[i][0]]['TIME'], data[heat[i][1]]['TIME'], np.sum(tent_gas),
-                                        'heat', data[heat[i][2]]['TIME'], data[heat[i][0]]['TEMPERATURE'],
-                                        data[heat[i][1]]['TEMPERATURE'], heat[i][3],
-                                        data[heat[i][2]]['TEMPERATURE'], np.sum(tent_gas2), heat[i][4], heat[i][5],
-                                        heat[i][6], heat[i][8], data[heat[i][1]]['TEMPERATURE'], i, drop_flag]]),
-                        columns=['가열로 번호', '시작시간', '종료시간', '가스사용량(마지막 구간)',
-                                 'Type', '실제 시작시간', '시작온도', '종료온도', '뺄시간',
-                                 '원래시작점온도', '가스사용량', '가열중 문열림 횟수', '가열중 마지막 문닫힌 시간',
-                                 '최종 가열시작 온도', '이전 종료시간', '가열완료 온도', 'cycle', 'drop_flag']), sort=True)
-                h.df = h.df.reset_index(drop=True)
-                break
 
-            if change_point[j] != None:
-                if start == None:
+        count = change_point[heat[i][0]:heat[i][1] + 1]
+        if len([x for x in count if x is not None]) == 2 and heat[i][0] != heat[i][1] and data[heat[i][1]]['TEMPERATURE'] - data[heat[i][0]]['TEMPERATURE'] >= 50:
+            drop_flag = 0
+            tent_gas = []
+            tent_gas2 = []
+            if heat[i][7] is None:
+                for j in range(heat[i][0] + 1, heat[i][1] + 1):
+                    tent_gas.append(data[j]['GAS'])
+                for j in range(heat[i][0] + 1, heat[i][1] + 1):
+                    tent_gas2.append(data[j]['GAS'])
+            else:
+                for j in range(heat[i][7] + 1, heat[i][1] + 1):
+                    tent_gas.append(data[j]['GAS'])
+                for j in range(heat[i][0] + 1, heat[i][1] + 1):
+                    tent_gas2.append(data[j]['GAS'])
+            # print(len(heat), i)
+            if data[heat[i][0]]['GAS_OFF'] == 1 or data[heat[i][1]]['GAS_OFF'] == 1 or \
+                    data[heat[i][0]]['TEMP_OFF'] == 1 or data[heat[i][1]]['TEMP_OFF'] == 1 or heat[i][8] == 0 or \
+                    heat[i][8] is None:
+                drop_flag = 1
+            h.df = h.df.append(
+                pd.DataFrame(
+                    data=np.array([[num, data[heat[i][0]]['TIME'], data[heat[i][1]]['TIME'], np.sum(tent_gas),
+                                    'heat', data[heat[i][2]]['TIME'], data[heat[i][0]]['TEMPERATURE'],
+                                    data[heat[i][1]]['TEMPERATURE'], heat[i][3],
+                                    data[heat[i][2]]['TEMPERATURE'], np.sum(tent_gas2), heat[i][4], heat[i][5],
+                                    heat[i][6], heat[i][8], data[heat[i][1]]['TEMPERATURE'], i, drop_flag]]),
+                    columns=['가열로 번호', '시작시간', '종료시간', '가스사용량(마지막 구간)',
+                             'Type', '실제 시작시간', '시작온도', '종료온도', '뺄시간',
+                             '원래시작점온도', '가스사용량', '가열중 문열림 횟수', '가열중 마지막 문닫힌 시간',
+                             '최종 가열시작 온도', '이전 종료시간', '가열완료 온도', 'cycle', 'drop_flag']), sort=True)
+            h.df = h.df.reset_index(drop=True)
+            continue
+
+        # if heat[i][0] == heat[i][1]:
+        #     tent_gas.append(data[j]['GAS'])
+        #     tent_gas2.append(data[j]['GAS'])
+        #     if data[heat[i][0]]['GAS_OFF'] == 1 or data[heat[i][1]]['GAS_OFF'] == 1 or \
+        #             data[heat[i][0]]['TEMP_OFF'] == 1 or data[heat[i][1]]['TEMP_OFF'] == 1 or heat[i][8] == 0 or \
+        #             heat[i][8] is None:
+        #         drop_flag = 1
+        #     h.df = h.df.append(
+        #         pd.DataFrame(
+        #             data=np.array([[num, data[heat[i][0]]['TIME'], data[heat[i][1]]['TIME'], np.sum(tent_gas),
+        #                             'heat', data[heat[i][2]]['TIME'], data[heat[i][0]]['TEMPERATURE'],
+        #                             data[heat[i][1]]['TEMPERATURE'], heat[i][3],
+        #                             data[heat[i][2]]['TEMPERATURE'], np.sum(tent_gas2), heat[i][4], heat[i][5],
+        #                             heat[i][6], heat[i][8], data[heat[i][1]]['TEMPERATURE'], i, drop_flag]]),
+        #             columns=['가열로 번호', '시작시간', '종료시간', '가스사용량(마지막 구간)',
+        #                      'Type', '실제 시작시간', '시작온도', '종료온도', '뺄시간',
+        #                      '원래시작점온도', '가스사용량', '가열중 문열림 횟수', '가열중 마지막 문닫힌 시간',
+        #                      '최종 가열시작 온도', '이전 종료시간', '가열완료 온도', 'cycle', 'drop_flag']), sort=True)
+        #     h.df = h.df.reset_index(drop=True)
+        #     break
+
+        for j in range(heat[i][0], heat[i][1] + 1):
+            if change_point[j] is not None:
+                if start is None:
                     start = j
                     tent_gas.append(data[j]['GAS'])
                 else:
+                    if j < start + 30:
+                        # start = j
+                        continue
+
                     end = j
                     tent_gas.append(data[j]['GAS'])
 
@@ -143,11 +182,10 @@ def make_database2(data, num, h, change_point, phase_list_dict):
                     else:
                         tent_gas2 = tent_gas
 
-                    if data[start]['GAS_OFF'] == 1 or data[end]['GAS_OFF'] == 1 or \
-                            data[start]['TEMP_OFF'] == 1 or data[end]['TEMP_OFF'] == 1 or heat[i][8] == 0 or \
-                            heat[i][8] is None:
+                    if data[start]['GAS_OFF'] == 1 or data[end]['GAS_OFF'] == 1 or data[start]['TEMP_OFF'] == 1 or \
+                            data[end]['TEMP_OFF'] == 1 or heat[i][8] == 0 or heat[i][8] is None:
                         drop_flag = 1
-                    if data[end]['TEMPERATURE'] - data[start]['TEMPERATURE'] >= 10:
+                    if data[end]['TEMPERATURE'] - data[start]['TEMPERATURE'] >= 50:
                         h.df = h.df.append(
                             pd.DataFrame(
                                 data=np.array([[num, data[start]['TIME'], data[end]['TIME'], np.sum(tent_gas),
@@ -166,9 +204,8 @@ def make_database2(data, num, h, change_point, phase_list_dict):
                     tent_gas = []
                     tent_gas2 = []
             else:
-                if start != None:
+                if start is not None:
                     tent_gas.append(data[j]['GAS'])
-
 
         # Steven - heat[i][7] = heating_parameter_dict['heat_start_index']
         # if heat[i][7] is None:
@@ -252,6 +289,37 @@ def make_database2(data, num, h, change_point, phase_list_dict):
 
 # checking that current cycle's material is same with previous cycle's material
 def gum_2(h1):
+    h1.change_list()
+    del_arr = []
+    for i, row in h1.df.iterrows():
+        count = 0
+        flag = 0
+        for j in h1.df['소재 list'].loc[i]:
+            if i > 0 and j in h1.df['소재 list'].loc[i-1]:
+                flag = 1
+                # del_arr.append(i)
+                # print(i)
+                count += 1
+                # break
+        if flag == 1:
+            del_arr.append(i)
+        h1.df.loc[i, '겹침수량'] = str(count)
+        if i == 0 or h1.df.loc[i, 'cycle'] == '0':
+            h1.df.loc[i, '직전 사이클 소재 수량'] = 0
+        elif i > 0:
+            h1.df.loc[i, '직전 사이클 소재 수량'] = len(h1.df['소재 list'].loc[i-1])
+    for i, row in h1.df.iterrows():
+        if i in del_arr:
+            h1.df.loc[i, '겹침여부'] = '겹침'
+            # h1.df.loc[i, '겹침수량'] = str()
+        else:
+            h1.df.loc[i, '겹침여부'] = '안겹침'
+            # h1.df.loc[i, '겹침수량'] = '겹침'
+    h1.df = h1.df.reset_index(drop=True)
+
+
+def gum_22(h1):
+    h1.set_next_h_2()
     h1.change_list()
     del_arr = []
     for i, row in h1.df.iterrows():

@@ -181,6 +181,7 @@ def point_detection_while_heating(WINDOW_DATA, current, change_point, pp_mean, f
         else:
             if flag_temp - thr <= WINDOW_DATA[current]['TEMPERATURE'] <= flag_temp + thr:
                 change_point[i] = WINDOW_DATA[current]['TEMPERATURE']
+                flag_temp = (flag_temp + WINDOW_DATA[current]['TEMPERATURE']) / 2
                 if i > flag_end + 3000:
                     for j in range(flag_start + 1, flag_end):
                         change_point[j] = None
@@ -359,9 +360,9 @@ def module_door_close_while_heat(WINDOW_DATA, current, change_point, i, thr, tim
 
     # 재가열 완료
     elif check_reheat_end(find_change_point_dict, WINDOW_DATA, current, i, thr, time_dict):
-        change_point[find_change_point_dict['door_close_estimate']['index']] = find_change_point_dict['door_close_estimate']['now']['TEMPERATURE']
-        change_point[find_change_point_dict['door_open_save']['index']] = find_change_point_dict['door_open_save']['now']['TEMPERATURE']
-        change_point[find_change_point_dict['reheat_end_candidate']['index']] = find_change_point_dict['reheat_end_candidate']['now']['TEMPERATURE']
+        # change_point[find_change_point_dict['door_close_estimate']['index']] = find_change_point_dict['door_close_estimate']['now']['TEMPERATURE']
+        # change_point[find_change_point_dict['door_open_save']['index']] = find_change_point_dict['door_open_save']['now']['TEMPERATURE']
+        # change_point[find_change_point_dict['reheat_end_candidate']['index']] = find_change_point_dict['reheat_end_candidate']['now']['TEMPERATURE']
         find_change_point_dict['door_open'] = False
         find_change_point_dict['door_open_save'] = None
         find_change_point_dict['reheat_end_candidate'] = None
@@ -388,9 +389,9 @@ def module_door_close(WINDOW_DATA, current, change_point, i, thr, time_dict, sta
 
     # 재가열 완료
     elif check_reheat_end(find_change_point_dict, WINDOW_DATA, current, i, thr, time_dict):
-        change_point[find_change_point_dict['door_close_estimate']['index']] = find_change_point_dict['door_close_estimate']['now']['TEMPERATURE']
-        change_point[find_change_point_dict['door_open_save']['index']] = find_change_point_dict['door_open_save']['now']['TEMPERATURE']
-        change_point[find_change_point_dict['reheat_end_candidate']['index']] = find_change_point_dict['reheat_end_candidate']['now']['TEMPERATURE']
+        # change_point[find_change_point_dict['door_close_estimate']['index']] = find_change_point_dict['door_close_estimate']['now']['TEMPERATURE']
+        # change_point[find_change_point_dict['door_open_save']['index']] = find_change_point_dict['door_open_save']['now']['TEMPERATURE']
+        # change_point[find_change_point_dict['reheat_end_candidate']['index']] = find_change_point_dict['reheat_end_candidate']['now']['TEMPERATURE']
         phase_list_dict['open'].append([find_change_point_dict['door_open_save']['index'],
                                         find_change_point_dict['door_close_estimate']['index'],
                                         find_change_point_dict['reheat_end_candidate']['index']])

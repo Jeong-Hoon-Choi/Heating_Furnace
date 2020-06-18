@@ -73,6 +73,40 @@ class HF:
         else:
             pass
 
+    def set_next_h_2(self):
+        temp = self.index_h
+        if self.flag_end == 0:
+            while 1:
+                if temp == len(self.df.index) - 1:
+                    self.flag_end = 1
+                    break
+                if temp < len(self.df.index) - 1:
+                    if self.df['Type'].loc[temp] == 'heat':
+                        break
+                    else:
+                        pass
+                    temp += 1
+            self.index_h = temp
+        else:
+            pass
+        self.index_h_next = self.index_h
+        temp = self.index_h_next
+        self.flag_end = 0
+        if self.flag_end == 0:
+            while 1:
+                if temp == len(self.df.index) - 1:
+                    self.flag_end = 1
+                    break
+                if temp < len(self.df.index) - 1:
+                    if self.df['Type'].loc[temp] == 'heat':
+                        break
+                    else:
+                        pass
+                    temp += 1
+            self.index_h_next = temp
+        else:
+            pass
+
     def search_next_h(self):
         temp = self.index_h_next
         if self.flag_end == 0:
@@ -136,11 +170,13 @@ class HF:
     def fill(self):
         count_c = 0
         # print(len(self.df.index))
+        empty = "['']"
+        self.df['소재 list'] = self.df['소재 list'].fillna(empty)
         for i, row in self.df.iterrows():
             # print(i)
             if pd.isna(self.df.loc[i, '소재 list']) and i > 0:
                 if self.df.loc[i, 'Type'] == 'open' and i > 0:
-                    self.df.loc[i, '소재 list'] = self.df.loc[i-1, '소재 list']
+                    self.df.loc[i, '소재 list'] = self.df.loc[i - 1, '소재 list']
                 elif self.df.loc[i, 'Type'] == 'hold' and i > 0:
                     self.df.loc[i, '소재 list'] = self.df.loc[i - 1, '소재 list']
                 elif self.df.loc[i, 'Type'] == 'reheat' and i > 0:
@@ -155,7 +191,7 @@ class HF:
             self.df['cycle'].loc[i] = count_c
             # if self.df['Type'].loc[i] == 'reheat' and self.df['in'].loc[i - 1] != '[]':
             #     self.df['in'].loc[i] = self.df['in'].loc[i - 1]
-            if self.df['Type'].loc[i] != 'heat':
+            if self.df['Type'].loc[i] != 'heat' and i is not 0:
                 self.df['작업일자'].loc[i] = self.df['작업일자'].loc[i - 1]
                 self.df['주/야간'].loc[i] = self.df['주/야간'].loc[i - 1]
 
