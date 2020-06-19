@@ -177,8 +177,7 @@ def work_set2():
     eliminate_drop(hh)
     hh.out(base_path + 'HF_OUT/last_2019_ffa')
     print('phase 2')
-    # hhh = ['heat', 'hold', 'open', 'reheat']
-    hhh = ['hold']
+    hhh = ['heat', 'hold', 'open', 'reheat']
     for i in hhh:
         print(i)
         h2 = HF()
