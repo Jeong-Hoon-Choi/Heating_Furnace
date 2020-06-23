@@ -45,7 +45,7 @@ def MLP(train_feature, train_label, test_feature, test_label, epoch=2000, unit=3
     return score, test_pred, train_pred, m
 
 
-# Decision Tree
+# Decision Tree _ not used
 def decision_tree_reg(train_feature, train_label, test_feature, test_label):
     print(len(train_feature), len(test_feature), len(train_label), len(test_label))
 

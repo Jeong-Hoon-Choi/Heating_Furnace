@@ -166,11 +166,24 @@ def make_database2(data, num, h, change_point, phase_list_dict):
             if change_point[j] is not None:
                 if start is None:
                     start = j
-                    tent_gas.append(data[j]['GAS'])
                 else:
-                    if j < start + 30:
-                        # start = j
+                    if data[j]['TEMPERATURE'] - data[start]['TEMPERATURE'] < 50:
+                        start = j
+                        end = None
+                        tent_gas = []
+                        tent_gas2 = []
                         continue
+
+                    if j < start + 30:
+                        tent_gas.append(data[j]['GAS'])
+                        continue
+
+                    lists = change_point[j + 1:heat[i][1] + 1]
+                    if lists:
+                        after = next(item for item in lists if item is not None)
+                        if after - data[j]['TEMPERATURE'] >= 50:
+                            tent_gas.append(data[j]['GAS'])
+                            continue
 
                     end = j
                     tent_gas.append(data[j]['GAS'])

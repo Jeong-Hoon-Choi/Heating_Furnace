@@ -38,10 +38,8 @@ class HF:
                 mass = []
                 for j in range(len(df_mat.index)):
                     num = '가열로' + str(self.df['가열로 번호'].loc[i]) + '호기'
-                    if num == df_mat['장입가열로'].loc[j] and \
-                            str(self.df['실제 시작시간'].loc[i]) == str(df_mat['시작시간'].loc[j]) + ':00':
-                        if pd.isna(df_mat.loc[j, '시리얼번호']) or len(df_mat.loc[j, '시리얼번호'].split(',')) > int(
-                                df_mat.loc[j, '투입수량']):
+                    if num == df_mat['장입가열로'].loc[j] and str(self.df['실제 시작시간'].loc[i]) == str(df_mat['시작시간'].loc[j]) + ':00':
+                        if pd.isna(df_mat.loc[j, '시리얼번호']) or len(df_mat.loc[j, '시리얼번호'].split(',')) > int(df_mat.loc[j, '투입수량']):
                             self.df.loc[i, 'drop_flag'] = 1
                         elif len(df_mat.loc[j, '시리얼번호'].split(',')) <= int(df_mat.loc[j, '투입수량']):
                             for k in range(len(df_mat.loc[j, '시리얼번호'].split(','))):
@@ -186,8 +184,9 @@ class HF:
                     self.df.loc[i, '소재 list'] = self.df.loc[i - 1, '소재 list']
                 elif self.df.loc[i, 'Type'] == 'reheat' and i > 0:
                     self.df.loc[i, '소재 list'] = self.df.loc[i - 1, '소재 list']
-            if self.df.loc[i, 'Type'] == 'heat':
-                count_c += 1
+            if i > 0:
+                if self.df.loc[i, 'Type'] == 'heat' and self.df.loc[i - 1, 'Type'] != 'heat':
+                    count_c += 1
             self.df['cycle'].loc[i] = count_c
             # if self.df['Type'].loc[i] == 'reheat' and self.df['in'].loc[i - 1] != '[]':
             #     self.df['in'].loc[i] = self.df['in'].loc[i - 1]
@@ -210,8 +209,7 @@ class HF:
                 for j in range(len(df_t.index)):
                     d2 = dt.datetime.strptime(df_t['가열시작일시'].loc[j], "%Y-%m-%d %H:%M")
                     num = '가열로' + str(self.df['가열로 번호'].loc[i]) + '호기'
-                    if num == df_t['가열로명'].loc[j] and \
-                            d1 == d2:
+                    if num == df_t['가열로명'].loc[j] and d1 == d2:
                         # print('work', df_t['작업일자'].loc[j], df_t['주/야간'].loc[j])
                         self.df['작업일자'].loc[i] = df_t['작업일자'].loc[j]
                         self.df['주/야간'].loc[i] = df_t['주/야간'].loc[j]

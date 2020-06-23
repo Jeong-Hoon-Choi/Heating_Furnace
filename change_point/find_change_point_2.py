@@ -51,7 +51,8 @@ def find_all(data, change_point, num, start_real, end_real):
     # 시작상태 세팅
     initialize_status(data[0]['TIME'], time_dict['real_start_time_list'][0], heating_parameter_dict, status_dict)
     if num == 5 or num == 6:
-        thr_end = 1220
+        # thr_end = 1220
+        thr_end = 1140
     else:
         thr_end = 1140
     for i in range(TIME_MARGIN):
@@ -169,6 +170,7 @@ def point_detection_while_heating(WINDOW_DATA, current, change_point, pp_mean, f
     global flag_temp
     past_data = []
     future_data = []
+    data = []
     for j in range(TIME_MARGIN):
         future_data.append(float(WINDOW_DATA[current + 1 + j]['TEMPERATURE']))
         past_data.append(float(WINDOW_DATA[current - TIME_MARGIN + j]['TEMPERATURE']))
@@ -177,22 +179,31 @@ def point_detection_while_heating(WINDOW_DATA, current, change_point, pp_mean, f
             change_point[i] = WINDOW_DATA[current]['TEMPERATURE']
             flag_start = i
             flag_end = i
+            data.append(float(WINDOW_DATA[current]['TEMPERATURE']))
             flag_temp = WINDOW_DATA[current]['TEMPERATURE']
         else:
             if flag_temp - thr <= WINDOW_DATA[current]['TEMPERATURE'] <= flag_temp + thr:
                 change_point[i] = WINDOW_DATA[current]['TEMPERATURE']
-                flag_temp = (flag_temp + WINDOW_DATA[current]['TEMPERATURE']) / 2
-                if i > flag_end + 3000:
+                data.append(float(WINDOW_DATA[current]['TEMPERATURE']))
+                flag_temp = np.mean(data)
+                if i > flag_end + 100:
                     for j in range(flag_start + 1, flag_end):
                         change_point[j] = None
+                    if flag_end - flag_start < 30:
+                        for j in range(flag_start, flag_end + 1):
+                            change_point[j] = None
                     flag_start = i
                 flag_end = i
             else:
                 for j in range(flag_start + 1, flag_end):
                     change_point[j] = None
+                if flag_end - flag_start < 30:
+                    for j in range(flag_start, flag_end + 1):
+                        change_point[j] = None
                 change_point[i] = WINDOW_DATA[current]['TEMPERATURE']
                 flag_start = i
                 flag_end = i
+                data = []
                 flag_temp = WINDOW_DATA[current]['TEMPERATURE']
 
     # 대분류

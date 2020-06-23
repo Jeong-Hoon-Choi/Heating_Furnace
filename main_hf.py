@@ -196,7 +196,7 @@ def work_set2():
 
 
 def HF_heating_learning():
-    epoch = 2000
+    epoch = 15000
     seed_start = 10
     seed_end = 20
 
