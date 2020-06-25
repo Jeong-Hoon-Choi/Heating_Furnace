@@ -185,7 +185,8 @@ class HF:
                 elif self.df.loc[i, 'Type'] == 'reheat' and i > 0:
                     self.df.loc[i, '소재 list'] = self.df.loc[i - 1, '소재 list']
             if i > 0:
-                if self.df.loc[i, 'Type'] == 'heat' and self.df.loc[i - 1, 'Type'] != 'heat':
+                if (self.df.loc[i, 'Type'] == 'heat' and self.df.loc[i - 1, 'Type'] != 'heat') or \
+                        (self.df.loc[i, 'Type'] == 'heat' and self.df.loc[i - 1, 'Type'] == 'heat' and self.df.loc[i, '실제 시작시간'] != self.df.loc[i - 1, '실제 시작시간']):
                     count_c += 1
             self.df['cycle'].loc[i] = count_c
             # if self.df['Type'].loc[i] == 'reheat' and self.df['in'].loc[i - 1] != '[]':

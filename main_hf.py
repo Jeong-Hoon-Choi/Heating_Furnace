@@ -159,7 +159,7 @@ def work_press2():
 
 
 # 구간 정리
-def work_set2():
+def work_set2(curve_type=0):
     hh = HF()
     df_t = pd.read_csv(base_path + 'data/start_end_re1.csv', encoding='euc-kr')
     # for num in error_arr_2019:
@@ -178,14 +178,50 @@ def work_set2():
     hh.out(base_path + 'HF_OUT/last_2019_ffa')
     print('phase 2')
     hhh = ['heat', 'hold', 'open', 'reheat']
+    # hhh = ['heat']
     for i in hhh:
         print(i)
         h2 = HF()
-        for j, row in hh.df.iterrows():
-            if hh.df['Type'].loc[j] == i:
-                h2.df = h2.df.append(row)
-            else:
-                pass
+        if i == 'heat':
+            # for j, row in hh.df.iterrows():
+            #     if hh.df['Type'].loc[j] == i:
+            #         if curve_type == 0:
+            #             h2.df = h2.df.append(row)
+            #         else:
+            #             count = 1
+            #             k = j + 1
+            #             while hh.df['Type'].loc[k] == i and hh.df['cycle'].loc[k] == hh.df['cycle'].loc[j]:
+            #                 count += 1
+            #                 k += 1
+            #             if count == curve_type:
+            #                 for l in range(j, k):
+            #                     h2.df = h2.df.append(hh.df.loc[l])
+            #             j = k
+            j = 0
+            rowdata = len(hh.df.index)
+            while j < rowdata:
+                if hh.df['Type'].loc[j] == i:
+                    if curve_type == 0:
+                        h2.df = h2.df.append(hh.df.loc[j])
+                        j += 1
+                    else:
+                        count = 1
+                        k = j + 1
+                        while hh.df['Type'].loc[k] == i and hh.df['cycle'].loc[k] == hh.df['cycle'].loc[j]:
+                            count += 1
+                            k += 1
+                        if count == curve_type:
+                            for l in range(j, k):
+                                h2.df = h2.df.append(hh.df.loc[l])
+                        j = k
+                else:
+                    j += 1
+        else:
+            for j, row in hh.df.iterrows():
+                if hh.df['Type'].loc[j] == i:
+                    h2.df = h2.df.append(row)
+                else:
+                    pass
         h2.df = h2.df.reset_index(drop=True)
         gum_22(h2)
         h2.df.to_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_' + i + '.csv', encoding='euc-kr')
@@ -196,7 +232,7 @@ def work_set2():
 
 
 def HF_heating_learning():
-    epoch = 15000
+    epoch = 10000
     seed_start = 10
     seed_end = 20
 
@@ -215,8 +251,7 @@ def HF_heating_learning():
                         out = []
                         out2 = []
                         out3 = []
-                        train_feature, train_label, test_feature, test_label = \
-                            data_manipulate_normal3(x, y, j[0], j[1], j[2], seed1)
+                        train_feature, train_label, test_feature, test_label = data_manipulate_normal3(x, y, j[0], j[1], j[2], seed1)
                         # data_manipulate_no_split(df_origin, j[0], j[1])
                         # data_manipulate_pca(origin2, j[0], j[1], seed1)
                         print(train_feature)
@@ -266,8 +301,8 @@ if __name__ == '__main__':
 
     # plot_heating_data(view=False)
     # work_press2()
-    # work_set2()
-    # make_heat()
-    # furnace_clustering()
-    HF_heating_learning()
+    work_set2(curve_type=2)
+    make_heat()
+    furnace_clustering()
+    # HF_heating_learning()
 
