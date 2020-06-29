@@ -135,6 +135,7 @@ def plot_heating_data(view):
         # print("find change_point done heating " + str(num))
         plotting(data, change_point, time_dict['fixed_start_time_list'], time_dict['fixed_end_time_list'], num,
                  time_dict['heat_ended_time_list'], time_dict['real_start_time_list'], time_dict['real_end_time_list'])
+        # plt.show()
         # make_database(data, num, h, phase_list_dict)
         make_database2(data, num, h, change_point, phase_list_dict)
         h.sett(df_mat, base_path + 'HF_OUT/hf_2019_')
@@ -204,6 +205,16 @@ def work_set2(curve_type=0):
                     if curve_type == 0:
                         h2.df = h2.df.append(hh.df.loc[j])
                         j += 1
+                    elif curve_type == 2:
+                        count = 1
+                        k = j + 1
+                        while hh.df['Type'].loc[k] == i and hh.df['cycle'].loc[k] == hh.df['cycle'].loc[j]:
+                            count += 1
+                            k += 1
+                        if count % curve_type == 0 or count > 5:
+                            for l in range(j, k):
+                                h2.df = h2.df.append(hh.df.loc[l])
+                        j = k
                     else:
                         count = 1
                         k = j + 1
@@ -299,10 +310,10 @@ if __name__ == '__main__':
     # get_data()
     # summarize_heating_data()
 
-    # plot_heating_data(view=False)
+    plot_heating_data(view=False)
     # work_press2()
-    work_set2(curve_type=2)
-    make_heat()
-    furnace_clustering()
+    # work_set2(curve_type=1)   # 0 = all, 1 = heating curve type 1, 3 = heating curve type 2, 5 = heating curve type 3, 2 = strange heating curve
+    # make_heat()
+    # furnace_clustering()
     # HF_heating_learning()
 

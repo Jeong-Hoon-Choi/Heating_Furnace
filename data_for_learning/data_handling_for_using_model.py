@@ -127,17 +127,22 @@ def make_database2(data, num, h, change_point, phase_list_dict):
                     data[heat[i][0]]['TEMP_OFF'] == 1 or data[heat[i][1]]['TEMP_OFF'] == 1 or heat[i][8] == 0 or \
                     heat[i][8] is None:
                 drop_flag = 1
+            temp_diff = abs(data[heat[i][1]]['TEMPERATURE'] - data[heat[i][0]]['TEMPERATURE'])
+            time_diff = (data[heat[i][1]]['TIME'] - data[heat[i][0]]['TIME']).total_seconds() / 3600
+            gradient = temp_diff / time_diff
             h.df = h.df.append(
                 pd.DataFrame(
                     data=np.array([[num, data[heat[i][0]]['TIME'], data[heat[i][1]]['TIME'], np.sum(tent_gas),
                                     'heat', data[heat[i][2]]['TIME'], data[heat[i][0]]['TEMPERATURE'],
                                     data[heat[i][1]]['TEMPERATURE'], heat[i][3],
                                     data[heat[i][2]]['TEMPERATURE'], np.sum(tent_gas2), heat[i][4], heat[i][5],
-                                    heat[i][6], heat[i][8], data[heat[i][1]]['TEMPERATURE'], i, drop_flag]]),
+                                    heat[i][6], heat[i][8], data[heat[i][1]]['TEMPERATURE'], i, drop_flag,
+                                    'increasing 0', str(temp_diff), str(time_diff), str(gradient)]]),
                     columns=['가열로 번호', '시작시간', '종료시간', '가스사용량(마지막 구간)',
                              'Type', '실제 시작시간', '시작온도', '종료온도', '뺄시간',
                              '원래시작점온도', '가스사용량', '가열중 문열림 횟수', '가열중 마지막 문닫힌 시간',
-                             '최종 가열시작 온도', '이전 종료시간', '가열완료 온도', 'cycle', 'drop_flag']), sort=True)
+                             '최종 가열시작 온도', '이전 종료시간', '가열완료 온도', 'cycle', 'drop_flag', 'part_types',
+                             'temp diff', 'time diff', 'gradient']), sort=True)
             h.df = h.df.reset_index(drop=True)
             continue
 
@@ -162,60 +167,116 @@ def make_database2(data, num, h, change_point, phase_list_dict):
         #     h.df = h.df.reset_index(drop=True)
         #     break
 
+        type = 0    # 0 = start, 1 = holding period, 2 = increasing period
+        tolerance = 30
+        tolerance_time = 40
+        count_flat = 0
+        count_increased = 0
         for j in range(heat[i][0], heat[i][1] + 1):
             if change_point[j] is not None:
                 if start is None:
                     start = j
                 else:
-                    if data[j]['TEMPERATURE'] - data[start]['TEMPERATURE'] < 50:
+                    if j < start + tolerance_time and data[j]['TEMPERATURE'] - data[start]['TEMPERATURE'] < tolerance:
+                        tent_gas.append(data[j]['GAS'])
+                        continue
+
+                    if type == 0:
+                        if data[j]['TEMPERATURE'] - data[start]['TEMPERATURE'] < tolerance:
+                            type = 1
+                        else:
+                            type = 2
+
+                    if data[j]['TEMPERATURE'] - data[start]['TEMPERATURE'] < tolerance and type == 1:
+                        lists = change_point[j + 1:heat[i][1] + 1]
+                        if lists:
+                            after = next(item for item in lists if item is not None)
+                            if after - data[j]['TEMPERATURE'] < tolerance:
+                                tent_gas.append(data[j]['GAS'])
+                                continue
+
+                        end = j
+                        tent_gas.append(data[j]['GAS'])
+
+                        if first_section is not None:
+                            for k in range(first_section, end):
+                                tent_gas2.append(data[k]['GAS'])
+                            first_section = None
+                        else:
+                            tent_gas2 = tent_gas
+
+                        if data[start]['GAS_OFF'] == 1 or data[end]['GAS_OFF'] == 1 or data[start]['TEMP_OFF'] == 1 or \
+                                data[end]['TEMP_OFF'] == 1 or heat[i][8] == 0 or heat[i][8] is None:
+                            drop_flag = 1
+                        if data[end]['TEMPERATURE'] - data[start]['TEMPERATURE'] < tolerance:
+                            temp_diff = abs(data[end]['TEMPERATURE'] - data[start]['TEMPERATURE'])
+                            time_diff = (data[end]['TIME'] - data[start]['TIME']).total_seconds() / 3600
+                            gradient = temp_diff / time_diff
+                            h.df = h.df.append(
+                                pd.DataFrame(
+                                    data=np.array([[num, data[start]['TIME'], data[end]['TIME'], np.sum(tent_gas),
+                                                    'heat', data[heat[i][2]]['TIME'], data[start]['TEMPERATURE'],
+                                                    data[end]['TEMPERATURE'], heat[i][3], data[heat[i][2]]['TEMPERATURE'],
+                                                    np.sum(tent_gas2), heat[i][4], heat[i][5], heat[i][6], heat[i][8],
+                                                    data[end]['TEMPERATURE'], i, drop_flag, 'holding ' + str(count_flat),
+                                                    str(temp_diff), str(time_diff), str(gradient)]]),
+                                    columns=['가열로 번호', '시작시간', '종료시간', '가스사용량(마지막 구간)', 'Type', '실제 시작시간', '시작온도',
+                                             '종료온도', '뺄시간', '원래시작점온도', '가스사용량', '가열중 문열림 횟수', '가열중 마지막 문닫힌 시간',
+                                             '최종 가열시작 온도', '이전 종료시간', '가열완료 온도', 'cycle', 'drop_flag', 'part_types',
+                                             'temp diff', 'time diff', 'gradient']), sort=True)
+                            count_flat += 1
+                            h.df = h.df.reset_index(drop=True)
+
+                        type = 0
                         start = j
                         end = None
                         tent_gas = []
                         tent_gas2 = []
-                        continue
+                    elif data[j]['TEMPERATURE'] - data[start]['TEMPERATURE'] >= tolerance and type == 2:
+                        lists = change_point[j + 1:heat[i][1] + 1]
+                        if lists:
+                            after = next(item for item in lists if item is not None)
+                            if after - data[j]['TEMPERATURE'] >= tolerance:
+                                tent_gas.append(data[j]['GAS'])
+                                continue
 
-                    if j < start + 30:
+                        end = j
                         tent_gas.append(data[j]['GAS'])
-                        continue
 
-                    lists = change_point[j + 1:heat[i][1] + 1]
-                    if lists:
-                        after = next(item for item in lists if item is not None)
-                        if after - data[j]['TEMPERATURE'] >= 50:
-                            tent_gas.append(data[j]['GAS'])
-                            continue
+                        if first_section is not None:
+                            for k in range(first_section, end):
+                                tent_gas2.append(data[k]['GAS'])
+                            first_section = None
+                        else:
+                            tent_gas2 = tent_gas
 
-                    end = j
-                    tent_gas.append(data[j]['GAS'])
+                        if data[start]['GAS_OFF'] == 1 or data[end]['GAS_OFF'] == 1 or data[start]['TEMP_OFF'] == 1 or \
+                                data[end]['TEMP_OFF'] == 1 or heat[i][8] == 0 or heat[i][8] is None:
+                            drop_flag = 1
+                        if data[end]['TEMPERATURE'] - data[start]['TEMPERATURE'] >= tolerance:
+                            temp_diff = abs(data[end]['TEMPERATURE'] - data[start]['TEMPERATURE'])
+                            time_diff = (data[end]['TIME'] - data[start]['TIME']).total_seconds() / 3600
+                            gradient = temp_diff / time_diff
+                            h.df = h.df.append(
+                                pd.DataFrame(
+                                    data=np.array([[num, data[start]['TIME'], data[end]['TIME'], np.sum(tent_gas),
+                                                    'heat', data[heat[i][2]]['TIME'], data[start]['TEMPERATURE'],
+                                                    data[end]['TEMPERATURE'], heat[i][3], data[heat[i][2]]['TEMPERATURE'],
+                                                    np.sum(tent_gas2), heat[i][4], heat[i][5], heat[i][6], heat[i][8],
+                                                    data[end]['TEMPERATURE'], i, drop_flag, 'increasing ' + str(count_increased),
+                                                    str(temp_diff), str(time_diff), str(gradient)]]),
+                                    columns=['가열로 번호', '시작시간', '종료시간', '가스사용량(마지막 구간)', 'Type', '실제 시작시간', '시작온도',
+                                             '종료온도', '뺄시간', '원래시작점온도', '가스사용량', '가열중 문열림 횟수', '가열중 마지막 문닫힌 시간',
+                                             '최종 가열시작 온도', '이전 종료시간', '가열완료 온도', 'cycle', 'drop_flag', 'part_types',
+                                             'temp diff', 'time diff', 'gradient']), sort=True)
+                            count_increased += 1
+                            h.df = h.df.reset_index(drop=True)
 
-                    if first_section is not None:
-                        for k in range(first_section, end):
-                            tent_gas2.append(data[k]['GAS'])
-                        first_section = None
-                    else:
-                        tent_gas2 = tent_gas
-
-                    if data[start]['GAS_OFF'] == 1 or data[end]['GAS_OFF'] == 1 or data[start]['TEMP_OFF'] == 1 or \
-                            data[end]['TEMP_OFF'] == 1 or heat[i][8] == 0 or heat[i][8] is None:
-                        drop_flag = 1
-                    if data[end]['TEMPERATURE'] - data[start]['TEMPERATURE'] >= 50:
-                        h.df = h.df.append(
-                            pd.DataFrame(
-                                data=np.array([[num, data[start]['TIME'], data[end]['TIME'], np.sum(tent_gas),
-                                                'heat', data[heat[i][2]]['TIME'], data[start]['TEMPERATURE'],
-                                                data[end]['TEMPERATURE'], heat[i][3],
-                                                data[heat[i][2]]['TEMPERATURE'], np.sum(tent_gas2), heat[i][4], heat[i][5],
-                                                heat[i][6], heat[i][8], data[end]['TEMPERATURE'], i, drop_flag]]),
-                                columns=['가열로 번호', '시작시간', '종료시간', '가스사용량(마지막 구간)',
-                                         'Type', '실제 시작시간', '시작온도', '종료온도', '뺄시간',
-                                         '원래시작점온도', '가스사용량', '가열중 문열림 횟수', '가열중 마지막 문닫힌 시간',
-                                         '최종 가열시작 온도', '이전 종료시간', '가열완료 온도', 'cycle', 'drop_flag']), sort=True)
-                        h.df = h.df.reset_index(drop=True)
-
-                    start = j
-                    end = None
-                    tent_gas = []
-                    tent_gas2 = []
+                        type = 0
+                        start = j
+                        end = None
+                        tent_gas = []
+                        tent_gas2 = []
             else:
                 if start is not None:
                     tent_gas.append(data[j]['GAS'])
