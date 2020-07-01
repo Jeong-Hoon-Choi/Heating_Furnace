@@ -1,4 +1,9 @@
+import datetime
+
 import matplotlib.pyplot as plt
+from matplotlib.dates import DateFormatter
+from matplotlib.ticker import MultipleLocator, AutoMinorLocator
+from matplotlib.widgets import Button
 import datetime as dt
 import numpy as np
 import pandas as pd
@@ -397,7 +402,7 @@ def reinforce(data):
 
 
 # Data plot
-def plotting(data, change_point10, start_arr, end_arr, num, re, start_real=None, end_real=None):
+def plotting(data, change_point10, start_arr, end_arr, num, re, start_real=None, end_real=None, view=False):
     x = []
     y = []
     z = []
@@ -473,7 +478,130 @@ def plotting(data, change_point10, start_arr, end_arr, num, re, start_real=None,
     plt.plot(data_Sdeviation, 'o', color='red', lw=5)
     '''
     # plt.plot(data_S, 'o', color='yellow')
-    # plt.show()
+    if view:
+        plt.show()
+
+
+def plotting_weekly(data, change_point10, start_arr, end_arr, num, re, start_real=None, end_real=None, view=False):
+    global start_week
+    global current_week
+    global end_week
+    start_week = 0
+    current_week = 0
+    end_week = int(len(data) / 10080)
+
+    fig = plt.figure(figsize=(14, 7))
+    graph = fig.add_subplot(111)
+
+    plot_data(graph, current_week, end_week, data, change_point10, start_arr, end_arr, num, re, start_real, end_real)
+    plt.subplots_adjust(left=0.075, bottom=0.15, right=0.975, top=0.95)
+
+    axButtonPrev = plt.axes([0.35, 0.05, 0.15, 0.05]) # left, bottom, width, height
+    btnPrev = Button(ax=axButtonPrev, label='Prev')
+
+    def prev(event):
+        global start_week
+        global current_week
+        global end_week
+        if start_week < current_week <= end_week:
+            current_week -= 1
+            plot_data(graph, current_week, end_week, data, change_point10, start_arr, end_arr, num, re, start_real, end_real)
+            plt.draw()
+    btnPrev.on_clicked(prev)
+
+    axButtonNext = plt.axes([0.5, 0.05, 0.15, 0.05]) # left, bottom, width, height
+    btnNext = Button(ax=axButtonNext, label='Next')
+
+    def next(event):
+        global start_week
+        global current_week
+        global end_week
+        if start_week <= current_week < end_week:
+            current_week += 1
+            plot_data(graph, current_week, end_week, data, change_point10, start_arr, end_arr, num, re, start_real, end_real)
+            plt.draw()
+    btnNext.on_clicked(next)
+
+    if view:
+        plt.show()
+
+
+def plot_data(graph, week, end_week, data, change_point10, start_arr, end_arr, num, re, start_real=None, end_real=None):
+    graph.cla()
+    graph.set_title((str(num) + "heat"))
+
+    start = week * 10080
+    end = (week * 10080) + 10080
+
+    x = []
+    y = []
+    z = []
+
+    graph.set_ylim(0, 1500)
+
+    if week == end_week:
+        rest = start + (len(data) % 10080) - 1
+        end_date = data[start]['TIME'] + datetime.timedelta(days=7)
+        graph.set_xlim(data[start]['TIME'], end_date)
+        for i in range(start, rest):
+            x.append(data[i]['TIME'])
+            y.append(data[i]['TEMPERATURE'])
+            z.append(data[i]['GAS'] * 5)
+    else:
+        graph.set_xlim(data[start]['TIME'], data[end]['TIME'])
+        for i in range(start, end):
+            x.append(data[i]['TIME'])
+            y.append(data[i]['TEMPERATURE'])
+            z.append(data[i]['GAS'] * 5)
+
+    graph.set_ylabel("temperature")
+
+    # ticks = np.arange(0, 1401, 200)
+    # graph.set_yticks(ticks)
+
+    # 가스, 온도
+    graph.plot(x, y, color='dimgrey')
+    # graph.plot(x, z, color='black')
+
+    formatter = DateFormatter("%b-%d")
+    formatter2 = DateFormatter("%H")
+    graph.xaxis.set_major_formatter(formatter)
+    graph.xaxis.set_minor_formatter(formatter2)
+    graph.xaxis.set_minor_locator(AutoMinorLocator(4))
+
+    graph.yaxis.set_minor_locator(AutoMinorLocator(2))
+    graph.yaxis.set_major_locator(MultipleLocator(200))
+
+    # graph.grid()
+    graph.grid(which='major', color='#CCCCCC')
+    graph.grid(which='minor', color='#CCCCCC', linestyle=':')
+
+    # change point / 수직선들
+    if start_real is not None:
+        for i in start_real:
+            if data[start]['TIME'] <= i < data[end]['TIME']:
+                graph.axvline(x=i, color='orange')
+
+    if end_real is not None:
+        for i in end_real:
+            if data[start]['TIME'] <= i < data[end]['TIME']:
+                graph.axvline(x=i, color='lime')
+
+    for i in re:
+        if data[start]['TIME'] <= i < data[end]['TIME']:
+            graph.axvline(x=i, color='purple')
+    for i in start_arr:
+        if data[start]['TIME'] <= i < data[end]['TIME']:
+            graph.axvline(x=i, color='red')
+    for i in end_arr:
+        if data[start]['TIME'] <= i < data[end]['TIME']:
+            graph.axvline(x=i, color='green')
+
+    if week == end_week:
+        rest = start + (len(data) % 10080) - 1
+        graph.plot(x, [change_point10[i] for i in range(start, rest)], 'o', color='red')
+    else:
+        graph.plot(x, [change_point10[i] for i in range(start, end)], 'o', color='red')
 
 
 def plotting2(data, start_arr, end_arr, num):

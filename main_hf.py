@@ -132,16 +132,14 @@ def plot_heating_data(view):
         h = HF()
         start_real, end_real = fc.data_manipulates(data, num, time_path)
         time_dict, phase_list_dict = fc.find_all(data, change_point, num, start_real, end_real)
-        # print("find change_point done heating " + str(num))
-        plotting(data, change_point, time_dict['fixed_start_time_list'], time_dict['fixed_end_time_list'], num,
-                 time_dict['heat_ended_time_list'], time_dict['real_start_time_list'], time_dict['real_end_time_list'])
-        # plt.show()
+        # plotting(data, change_point, time_dict['fixed_start_time_list'], time_dict['fixed_end_time_list'], num,
+        #          time_dict['heat_ended_time_list'], time_dict['real_start_time_list'], time_dict['real_end_time_list'],view)
+        plotting_weekly(data, change_point, time_dict['fixed_start_time_list'], time_dict['fixed_end_time_list'], num,
+                 time_dict['heat_ended_time_list'], time_dict['real_start_time_list'], time_dict['real_end_time_list'], view)
         # make_database(data, num, h, phase_list_dict)
         make_database2(data, num, h, change_point, phase_list_dict)
         h.sett(df_mat, base_path + 'HF_OUT/hf_2019_')
-        print('DB_Done')
-    if view:
-        plt.show()
+        print(str(num) + ' DB_Done')
 
 
 # 프레스기 매칭
@@ -310,7 +308,7 @@ if __name__ == '__main__':
     # get_data()
     # summarize_heating_data()
 
-    plot_heating_data(view=False)
+    plot_heating_data(view=True)
     # work_press2()
     # work_set2(curve_type=1)   # 0 = all, 1 = heating curve type 1, 3 = heating curve type 2, 5 = heating curve type 3, 2 = strange heating curve
     # make_heat()

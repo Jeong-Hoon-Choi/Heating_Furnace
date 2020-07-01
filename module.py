@@ -22,12 +22,10 @@ def work_start(view):
         time_dict, phase_list_dict = fc.find_all(data, change_point, num, start_real, end_real)
         # print("find change_point done heating " + str(num))
         plotting(data, change_point, time_dict['fixed_start_time_list'], time_dict['fixed_end_time_list'], num,
-                 time_dict['heat_ended_time_list'], time_dict['real_start_time_list'], time_dict['real_end_time_list'])
+                 time_dict['heat_ended_time_list'], time_dict['real_start_time_list'], time_dict['real_end_time_list'], view)
         make_database(data, num, h, phase_list_dict)
         h.sett(df_mat, base_path + 'HF_OUT/test_2019_a_')
         print('DB_Done')
-    if view:
-        plt.show()
 
 
 # 프레스기 매칭
