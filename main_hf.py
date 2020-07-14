@@ -133,7 +133,7 @@ def plot_heating_data(view):
         start_real, end_real = fc.data_manipulates(data, num, time_path)
         time_dict, phase_list_dict = fc.find_all(data, change_point, num, start_real, end_real)
         # plotting(data, change_point, time_dict['fixed_start_time_list'], time_dict['fixed_end_time_list'], num,
-        #          time_dict['heat_ended_time_list'], time_dict['real_start_time_list'], time_dict['real_end_time_list'],view)
+        #          time_dict['heat_ended_time_list'], time_dict['real_start_time_list'], time_dict['real_end_time_list'])
         plotting_weekly(data, change_point, time_dict['fixed_start_time_list'], time_dict['fixed_end_time_list'], num,
                  time_dict['heat_ended_time_list'], time_dict['real_start_time_list'], time_dict['real_end_time_list'], view)
         # make_database(data, num, h, phase_list_dict)
@@ -203,13 +203,14 @@ def work_set2(curve_type=0):
                     if curve_type == 0:
                         h2.df = h2.df.append(hh.df.loc[j])
                         j += 1
-                    elif curve_type == 2:
+                    elif curve_type == 10:
                         count = 1
                         k = j + 1
                         while hh.df['Type'].loc[k] == i and hh.df['cycle'].loc[k] == hh.df['cycle'].loc[j]:
                             count += 1
                             k += 1
-                        if count % curve_type == 0 or count > 5:
+                        # if count % 2 == 0 or count > 5:
+                        if count > 3:
                             for l in range(j, k):
                                 h2.df = h2.df.append(hh.df.loc[l])
                         j = k
@@ -308,10 +309,10 @@ if __name__ == '__main__':
     # get_data()
     # summarize_heating_data()
 
-    plot_heating_data(view=True)
+    # plot_heating_data(view=False)
     # work_press2()
-    # work_set2(curve_type=1)   # 0 = all, 1 = heating curve type 1, 3 = heating curve type 2, 5 = heating curve type 3, 2 = strange heating curve
+    # work_set2(curve_type=1)   # 0 = all, 1 = heating curve type 1, 2 = heating curve type 2, 3 = heating curve type 3, 10 = strange heating curve
     # make_heat()
     # furnace_clustering()
-    # HF_heating_learning()
+    HF_heating_learning()
 

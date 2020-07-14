@@ -208,24 +208,24 @@ def make_database2(data, num, h, change_point, phase_list_dict):
                         if data[start]['GAS_OFF'] == 1 or data[end]['GAS_OFF'] == 1 or data[start]['TEMP_OFF'] == 1 or \
                                 data[end]['TEMP_OFF'] == 1 or heat[i][8] == 0 or heat[i][8] is None:
                             drop_flag = 1
-                        if data[end]['TEMPERATURE'] - data[start]['TEMPERATURE'] < tolerance:
-                            temp_diff = abs(data[end]['TEMPERATURE'] - data[start]['TEMPERATURE'])
-                            time_diff = (data[end]['TIME'] - data[start]['TIME']).total_seconds() / 3600
-                            gradient = temp_diff / time_diff
-                            h.df = h.df.append(
-                                pd.DataFrame(
-                                    data=np.array([[num, data[start]['TIME'], data[end]['TIME'], np.sum(tent_gas),
-                                                    'heat', data[heat[i][2]]['TIME'], data[start]['TEMPERATURE'],
-                                                    data[end]['TEMPERATURE'], heat[i][3], data[heat[i][2]]['TEMPERATURE'],
-                                                    np.sum(tent_gas2), heat[i][4], heat[i][5], heat[i][6], heat[i][8],
-                                                    data[end]['TEMPERATURE'], i, drop_flag, 'holding ' + str(count_flat),
-                                                    str(temp_diff), str(time_diff), str(gradient)]]),
-                                    columns=['가열로 번호', '시작시간', '종료시간', '가스사용량(마지막 구간)', 'Type', '실제 시작시간', '시작온도',
-                                             '종료온도', '뺄시간', '원래시작점온도', '가스사용량', '가열중 문열림 횟수', '가열중 마지막 문닫힌 시간',
-                                             '최종 가열시작 온도', '이전 종료시간', '가열완료 온도', 'cycle', 'drop_flag', 'part_types',
-                                             'temp diff', 'time diff', 'gradient']), sort=True)
-                            count_flat += 1
-                            h.df = h.df.reset_index(drop=True)
+                        # if data[end]['TEMPERATURE'] - data[start]['TEMPERATURE'] < tolerance:
+                        #     temp_diff = abs(data[end]['TEMPERATURE'] - data[start]['TEMPERATURE'])
+                        #     time_diff = (data[end]['TIME'] - data[start]['TIME']).total_seconds() / 3600
+                        #     gradient = temp_diff / time_diff
+                        #     h.df = h.df.append(
+                        #         pd.DataFrame(
+                        #             data=np.array([[num, data[start]['TIME'], data[end]['TIME'], np.sum(tent_gas),
+                        #                             'heat', data[heat[i][2]]['TIME'], data[start]['TEMPERATURE'],
+                        #                             data[end]['TEMPERATURE'], heat[i][3], data[heat[i][2]]['TEMPERATURE'],
+                        #                             np.sum(tent_gas2), heat[i][4], heat[i][5], heat[i][6], heat[i][8],
+                        #                             data[end]['TEMPERATURE'], i, drop_flag, 'holding ' + str(count_flat),
+                        #                             str(temp_diff), str(time_diff), str(gradient)]]),
+                        #             columns=['가열로 번호', '시작시간', '종료시간', '가스사용량(마지막 구간)', 'Type', '실제 시작시간', '시작온도',
+                        #                      '종료온도', '뺄시간', '원래시작점온도', '가스사용량', '가열중 문열림 횟수', '가열중 마지막 문닫힌 시간',
+                        #                      '최종 가열시작 온도', '이전 종료시간', '가열완료 온도', 'cycle', 'drop_flag', 'part_types',
+                        #                      'temp diff', 'time diff', 'gradient']), sort=True)
+                        #     count_flat += 1
+                        #     h.df = h.df.reset_index(drop=True)
 
                         type = 0
                         start = j
@@ -471,6 +471,8 @@ def determine_weekend(h):
         if i > 0:
             d1 = dt.datetime.strptime(h.df['시작시간'].loc[i], "%Y-%m-%d %H:%M:%S")
             d2 = dt.datetime.strptime(h.df['시작시간'].loc[i-1], "%Y-%m-%d %H:%M:%S")
+            # d1 = dt.datetime.strptime(h.df['시작시간'].loc[i], "%m/%d/%Y %H:%M")
+            # d2 = dt.datetime.strptime(h.df['시작시간'].loc[i-1], "%m/%d/%Y %H:%M")
             last_day = datee[d2.weekday()]
             to_day = datee[d1.weekday()]
             if to_day == '토' or to_day == '일':
@@ -720,6 +722,10 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, s):
             d1 = dt.datetime.strptime(HT.df['시작시간'].loc[i], "%Y-%m-%d %H:%M:%S")
             d2 = dt.datetime.strptime(HT.df['종료시간'].loc[i], "%Y-%m-%d %H:%M:%S")
             d3 = dt.datetime.strptime(HT.df['이전 종료시간'].loc[i], "%Y-%m-%d %H:%M:%S")
+            # dd1 = dt.datetime.strptime(HT.df['작업일자'].loc[i], '%m/%d/%Y')
+            # d1 = dt.datetime.strptime(HT.df['시작시간'].loc[i], "%m/%d/%Y %H:%M")
+            # d2 = dt.datetime.strptime(HT.df['종료시간'].loc[i], "%m/%d/%Y %H:%M")
+            # d3 = dt.datetime.strptime(HT.df['이전 종료시간'].loc[i], "%m/%d/%Y %H:%M")
             d0 = int(HT.df['뺄시간'].loc[i]) * 60
             t_start = HT.df['시작온도'].loc[i]
             t_end = HT.df['종료온도'].loc[i]

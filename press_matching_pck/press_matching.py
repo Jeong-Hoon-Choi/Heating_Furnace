@@ -160,7 +160,7 @@ def matching_press_general(heating_furnace_list, p):
         s = p['수주번호'].loc[i]
         s_1 = str(p['시리얼번호'].loc[i])
         for k in range(1, len(heating_furnace_list) + 1):
-            par['c'+str(k)] = 0
+            par['c' + str(k)] = 0
             par_flag['c' + str(k) + '_flag'] = 0
         if s_1[0] == '_':
             pass
