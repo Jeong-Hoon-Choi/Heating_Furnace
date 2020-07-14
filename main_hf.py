@@ -209,8 +209,7 @@ def work_set2(curve_type=0):
                         while hh.df['Type'].loc[k] == i and hh.df['cycle'].loc[k] == hh.df['cycle'].loc[j]:
                             count += 1
                             k += 1
-                        # if count % 2 == 0 or count > 5:
-                        if count > 3:
+                        if count % 2 == 0 or count > 5:
                             for l in range(j, k):
                                 h2.df = h2.df.append(hh.df.loc[l])
                         j = k
@@ -311,7 +310,7 @@ if __name__ == '__main__':
 
     # plot_heating_data(view=False)
     # work_press2()
-    # work_set2(curve_type=1)   # 0 = all, 1 = heating curve type 1, 2 = heating curve type 2, 3 = heating curve type 3, 10 = strange heating curve
+    # work_set2(curve_type=1)   # 0 = all, 1 = heating curve type 1, 3 = heating curve type 2, 5 = heating curve type 3, 10 = strange heating curve
     # make_heat()
     # furnace_clustering()
     HF_heating_learning()
