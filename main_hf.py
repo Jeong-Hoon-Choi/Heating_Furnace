@@ -310,7 +310,7 @@ if __name__ == '__main__':
 
     # plot_heating_data(view=False)
     # work_press2()
-    # work_set2(curve_type=1)   # 0 = all, 1 = heating curve type 1, 3 = heating curve type 2, 5 = heating curve type 3, 10 = strange heating curve
+    # work_set2(curve_type=0)   # 0 = all, 1 = heating curve type 1, 3 = heating curve type 2, 5 = heating curve type 3, 10 = strange heating curve
     # make_heat()
     # furnace_clustering()
     HF_heating_learning()
