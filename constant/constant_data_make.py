@@ -17,7 +17,8 @@ work_ = p_all
 
 work_space = ''
 
-base_path = './data_201907~202003/'
+# base_path = './data_201907~202003/'
+base_path = './data_202003~202007/'
 time_path = base_path + 'data/start_end_re1.csv'
 sensitive_path = base_path + 'data/sensitive.csv'
 clustering_condition_constant = ['민감만/1h제외', '민감만/1h포함', '민감제외/1h제외', '민감제외/1h포함', '전부/1h제외', '전부/1h포함']

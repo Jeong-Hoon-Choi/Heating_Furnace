@@ -255,7 +255,7 @@ def HF_heating_learning():
             df_new = pd.DataFrame()
             for seed1 in range(seed_start, seed_end):
                 x, y = Train_Test_split(df_origin, seed1)
-                for j2 in feature_list_0325_2:
+                for j2 in feature_list_0325_3:
                     for j in j2:
                         out = []
                         out2 = []
@@ -279,11 +279,11 @@ def HF_heating_learning():
                                 len(out) - 1]
 
                         # KNN
-                        knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature, train_label, test_feature, test_label)
-                        out2.append(mean_absolute_percentage_error(test_label, knn_test_pred))
-
-                        df_new.loc[seed1 - seed_start, j[3] + '_KNN_' + str(hidden) + '_' + str(unit) + '_' + j[0]] = \
-                        out2[len(out2) - 1]
+                        # knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature, train_label, test_feature, test_label)
+                        # out2.append(mean_absolute_percentage_error(test_label, knn_test_pred))
+                        #
+                        # df_new.loc[seed1 - seed_start, j[3] + '_KNN_' + str(hidden) + '_' + str(unit) + '_' + j[0]] = \
+                        # out2[len(out2) - 1]
 
                         # Decision Tree
                         # decision_tree_test_pred, decision_tree_train_pred, dt1 = decision_tree_reg(train_feature, train_label, test_feature, test_label)
