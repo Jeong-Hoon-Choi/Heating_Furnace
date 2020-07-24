@@ -709,7 +709,8 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, s):
                  '비민감소재장입개수': [], '비민감소재중량총합': [], '비민감소재최대중량': [],
                  '쉰시간': [], '문열림횟수': [], 'drop': [], '가열로번호': [],
                  '작업일자': [], '주/야간': [], '가열시작시간': [], '요일': [], '겹침여부': [], '민감비고': [],
-                 '직전 사이클 소재 수량': [], '겹치는 소재 수량': [], '강종종류': [], '주말여부': [], '에러발생': []}
+                 '직전 사이클 소재 수량': [], '겹치는 소재 수량': [], '강종종류': [], '주말여부': [], '에러발생': [],
+                 '강종': []}
     print(len(HT.df.index))
     for i in range(len(HT.df.index)):
         flag = 0
@@ -759,10 +760,27 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, s):
             for k in HT.df['소재 list'].loc[i]:
                 # print(k.split('_')[0])
                 temp_len_list = len(list_M)
+                # Steven - Add steel type
+                for j in range(len(df_mat.index)):
+                    if HT.df['주/야간'].loc[i] == df_mat['주/야간'].loc[j] and \
+                            HT.df['작업일자'].loc[i] == df_mat['작업일자'].loc[j] and \
+                            k.split('_')[0] == df_mat['수주번호'].loc[j]:
+                        if type(df_mat['강종'].loc[j]) == float:
+                            flag = 2
+                        elif df_mat['강종'].loc[j] == 'ALLOY':
+                            temp_dict['강종'].append('ALLOY')
+                            break
+                        elif df_mat['강종'].loc[j] == 'CARBON':
+                            temp_dict['강종'].append('CARBON')
+                            break
+                        elif df_mat['강종'].loc[j] == 'SUS' or 'SUS 304' or 'SUS 321':
+                            temp_dict['강종'].append('SUS')
+                            break
                 for j in range(len(df_mat.index)):
                     flag_H = 0
                     if HT.df['주/야간'].loc[i] == df_mat['주/야간'].loc[j] and \
-                            HT.df['작업일자'].loc[i] == df_mat['작업일자'].loc[j] and k.split('_')[0] == df_mat['수주번호'].loc[j]:
+                            HT.df['작업일자'].loc[i] == df_mat['작업일자'].loc[j] and \
+                            k.split('_')[0] == df_mat['수주번호'].loc[j]:
                         for t in range(len(df_mat_heat)):
                             dd0 = dt.datetime.strptime(df_mat_heat['1'].loc[t], '%Y-%m-%d %H:%M')
                             dd0_1 = dt.datetime(year=2019, month=dd0.month, day=dd0.day)

@@ -15,6 +15,9 @@ import os
 error_dict = {'case': [], '가열로 호기': [], '시간': [], '온도': [], '가스': []}
 case_id = 0
 
+oneWeekToMin = 10080     # 10080
+threeDaysToMin = 4320   # 4320
+
 
 class HF:
     index = 0
@@ -486,8 +489,8 @@ def plotting_weekly(data, change_point10, start_arr, end_arr, num, re, start_rea
     global start_count
     global current_count
     global end_count
-    oneWeekToMin = 4320     # 10080
-    threeDaysToMin = 1440   # 4320
+    global oneWeekToMin
+    global threeDaysToMin
 
     start_count = 0
     current_count = 0
@@ -532,8 +535,8 @@ def plotting_weekly(data, change_point10, start_arr, end_arr, num, re, start_rea
 
 
 def plot_data(graph, count, end_count, data, change_point10, start_arr, end_arr, num, re, start_real=None, end_real=None):
-    oneWeekToMin = 4320     # 10080
-    threeDaysToMin = 1440   # 4320
+    global oneWeekToMin
+    global threeDaysToMin
 
     graph.cla()
     graph.set_title((str(num) + "heat"))

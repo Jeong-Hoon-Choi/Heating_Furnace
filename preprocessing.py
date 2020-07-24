@@ -5,31 +5,44 @@ from constant.constant_data_make import *
 # 소재 -시간 매칭
 def add_time_to_material(s1, s2, s3):
     df_material_temp = pd.read_csv(s1, encoding='euc-kr', index_col=0)
-    df_material_temp['시작시간'] = ''
     # "./material_new/material_time_re2.csv"
     df_material_time = pd.read_csv(s2, encoding='euc-kr', index_col=0)
+    df_match = pd.DataFrame()
+    match_dict = {}
     for i in range(len(df_material_temp.index)):
         if pd.isna(df_material_temp['장입가열로'].loc[i]):
-            df_material_temp = df_material_temp.drop(i)
+            pass
+        else:
+            work_date = df_material_temp['작업일자'].loc[i]
+            d_n = df_material_temp['주/야간'].loc[i]
+            hogi = df_material_temp['장입가열로'].loc[i]
+            if work_date + d_n + hogi not in match_dict:
+                match_dict[work_date + d_n + hogi] = list()
+            match_dict[work_date + d_n + hogi].append(i)
             # print("work")
-    df_material_temp = df_material_temp.reset_index(drop=True)
-    print(len(df_material_temp.index))
-    for i, row in df_material_temp.iterrows():
-        for j, row2 in df_material_time.iterrows():
-            if df_material_temp['작업일자'].loc[i] == df_material_time['작업일자'].loc[j] and \
-                    df_material_temp['주/야간'].loc[i] == df_material_time['주/야간'].loc[j] and \
-                    df_material_temp['장입가열로'].loc[i] == df_material_time['가열로명'].loc[j]:
-                df_material_temp['시작시간'].loc[i] = df_material_time['가열시작일시'].loc[j]
-        print(i)
+    print(len(match_dict))
+    for j, row2 in df_material_time.iterrows():
+        dict_ = {}
+        work_date = df_material_time['작업일자'].loc[j]
+        d_n = df_material_time['주/야간'].loc[j]
+        hogi = df_material_time['가열로명'].loc[j]
+        if work_date + d_n + hogi in match_dict:
+            for index_ in match_dict[work_date + d_n + hogi]:
+                for col_name in df_material_temp.columns:
+                    dict_[col_name] = [df_material_temp.loc[index_, col_name]]
+                dict_['시작시간'] = [df_material_time.loc[j, '가열시작일시']]
+                df_temp = pd.DataFrame.from_dict(dict_)
+                df_match =pd.concat([df_match, df_temp])
+                df_match = df_match.reset_index(drop=True)
     print("done")
-    df_material_temp.to_csv(base_path + 'HF_OUT/' + s3, mode='w', encoding='euc-kr')
+    df_match.to_csv(s3, mode='w', encoding='euc-kr')
 
 
 # 소재/가열로 파싱
 def parsing_order_number(s):
     s_2 = s.split('/')[3]
     s_1 = s_2.split('.')[0]
-    df_1 = pd.read_csv(s, encoding='euc-kr')
+    df_1 = pd.read_csv(s)
     df = pre_parsing(df_1)
     df2 = pd.DataFrame(columns=df.columns)
     e = len(df.index)
@@ -111,12 +124,11 @@ def parsing_order_number(s):
     print(df2)
     df = df.sort_values(["작업일자"], ascending=[True])
     df = df.reset_index(drop=[True])
-    df.to_csv(base_path + 'HF_OUT/' + s_1 + '_par.csv', encoding='euc-kr')
+    df.to_csv(base_path + 'raw/' + s_1 + '_par.csv', encoding='euc-kr')
 
 
 # 프레스기 파싱
-def pre_parsing(s):
-    df_press_3 = pd.read_csv(s, encoding='euc-kr')
+def pre_parsing(df_press_3):
     for i in range(len(df_press_3.index)):
         if type(df_press_3['수주번호'].loc[int(i)]) != float and len(df_press_3['수주번호'].loc[int(i)]) > 16:
             if df_press_3['수주번호'].loc[int(i)][0] == 'A':
@@ -132,7 +144,7 @@ def pre_parsing(s):
 def wrong_st_ed(s, work=p_all2):
     s_2 = s.split('/')[3]
     s_1 = s_2.split('.')[0]
-    df = pd.read_csv(s, encoding='euc-kr', index_col=0)
+    df = pd.read_csv(s)
     df = df.fillna(0)
     df_temp = pd.DataFrame()
     del_arr = []
@@ -174,7 +186,7 @@ def wrong_st_ed(s, work=p_all2):
                 df_new = df_new.drop([t])
             df_temp = pd.concat([df_temp, df_new])
             df_temp = df_temp.reset_index(drop=True)
-    df_temp.to_csv(base_path + 'HF_OUT/' + s_1 + '_re1.csv', encoding='euc-kr')
+    df_temp.to_csv(base_path + 'raw/' + s_1 + '_re1.csv', encoding='euc-kr')
 
 
 # 민감소재 매칭
@@ -206,24 +218,24 @@ def match_S(s_list, df):
 # first you need to change format .xlsx to .csv
 
 # file B -> B'
+# parsing order number in material file
+file_path_material = base_path + 'raw/material.csv'
+parsing_order_number(file_path_material)
+
+# file C -> C'
 # Check the wrong data.
 file_path_time = base_path + 'raw/start_end.csv'
 wrong_st_ed(file_path_time, work=p_all2)
 
-# file C -> C'
-# parsing order number in material file
-file_path_material = base_path + 'raw/press.csv'
-# parsing_order_number(file_path_material)
-
 # file D -> D'
 # parsing order number in press data
-file_path_press = base_path + 'raw/프레스작업관리 – 조회.csv'
-# pre_parsing(file_path_press)
+file_path_press = base_path + 'raw/press.csv'
+parsing_order_number(file_path_press)
 
 # file M
 # needed B', C'
 # matching B', C'
-file_path_materials = base_path + 'raw/'
-file_path_time = base_path + 'raw/'
-file_path_output = base_path + 'raw/'
-# add_time_to_material(file_path_materials, file_path_time, file_path_output)
+file_path_materials = base_path + 'raw/material_par.csv'
+file_path_times = base_path + 'raw/start_end_re1.csv'
+file_path_output = base_path + 'raw/material_par3.csv'
+add_time_to_material(file_path_materials, file_path_times, file_path_output)
