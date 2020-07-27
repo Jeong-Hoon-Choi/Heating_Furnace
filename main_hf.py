@@ -164,7 +164,10 @@ def work_set2(curve_type=0):
     # for num in error_arr_2019:
     for num in work_:
         h = HF()
-        h.df = pd.read_csv(base_path + 'HF_OUT/press_2019_' + str(num) + '.csv', encoding='euc-kr', index_col=0)
+        # data without press matching
+        h.df = pd.read_csv(base_path + 'HF_OUT/hf_2019_' + str(num) + '.csv', encoding='euc-kr', index_col=0)
+        # data with press matching
+        # h.df = pd.read_csv(base_path + 'HF_OUT/press_2019_' + str(num) + '.csv', encoding='euc-kr', index_col=0)
         # eliminate_error_loop(h, num[1])
         h.match_time(df_t)
         print(str(num), '- end time matching')
@@ -308,10 +311,10 @@ if __name__ == '__main__':
     # get_data()
     # summarize_heating_data()
 
-    plot_heating_data(view=True)
-    # work_press2()
+    # plot_heating_data(view=False)
+    # work_press2()     # optional
     # work_set2(curve_type=1)   # 0 = all, 1 = heating curve type 1, 3 = heating curve type 2, 5 = heating curve type 3, 10 = strange heating curve
-    # make_heat()
-    # furnace_clustering()
+    make_heat()
+    furnace_clustering()
     # HF_heating_learning()
 
