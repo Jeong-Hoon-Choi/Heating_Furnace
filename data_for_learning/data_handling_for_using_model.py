@@ -106,12 +106,14 @@ def make_database2(data, num, h, change_point, phase_list_dict):
         if len([x for x in count if x is not None]) == 2 and heat[i][0] != heat[i][1] and data[heat[i][1]]['TEMPERATURE'] - data[heat[i][0]]['TEMPERATURE'] >= 50:
             drop_flag = 0
             tent_gas = []
-            if heat[i][7] is None:
-                for j in range(heat[i][0] + 1, heat[i][1] + 1):
-                    tent_gas.append(data[j]['GAS'])
-            else:
-                for j in range(heat[i][7] + 1, heat[i][1] + 1):
-                    tent_gas.append(data[j]['GAS'])
+            # if heat[i][7] is None:
+            #     for j in range(heat[i][0] + 1, heat[i][1] + 1):
+            #         tent_gas.append(data[j]['GAS'])
+            # else:
+            #     for j in range(heat[i][7] + 1, heat[i][1] + 1):
+            #         tent_gas.append(data[j]['GAS'])
+            for j in range(heat[i][0] + 1, heat[i][1] + 1):
+                tent_gas.append(data[j]['GAS'])
             # print(len(heat), i)
             if data[heat[i][0]]['GAS_OFF'] == 1 or data[heat[i][1]]['GAS_OFF'] == 1 or \
                     data[heat[i][0]]['TEMP_OFF'] == 1 or data[heat[i][1]]['TEMP_OFF'] == 1 or heat[i][8] == 0 or \
@@ -662,12 +664,13 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, s):
                  '쉰시간': [], '문열림횟수': [], 'drop': [], '가열로번호': [],
                  '작업일자': [], '주/야간': [], '가열시작시간': [], '요일': [], '겹침여부': [], '민감비고': [],
                  '직전 사이클 소재 수량': [], '겹치는 소재 수량': [], '강종종류': [], '주말여부': [], '에러발생': [],
-                 '강종': []}
+                 '강종': [], '강종_ALLOY': [], '강종_CARBON': [], '강종_SUS': []}
     print(len(HT.df.index))
     for i in range(len(HT.df.index)):
         flag = 0
         flag_S = 0
         flag_E = 0
+        steel_type = 0
         if HT.df['Type'].loc[i] == 'heat':
             dd1 = dt.datetime.strptime(HT.df['작업일자'].loc[i], '%Y-%m-%d')
             d1 = dt.datetime.strptime(HT.df['시작시간'].loc[i], "%Y-%m-%d %H:%M:%S")
@@ -719,14 +722,15 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, s):
                             k.split('_')[0] == df_mat['수주번호'].loc[j]:
                         if type(df_mat['강종'].loc[j]) == float:
                             flag = 2
+                            break
                         elif df_mat['강종'].loc[j] == 'ALLOY':
-                            temp_dict['강종'].append('ALLOY')
+                            steel_type = 1
                             break
                         elif df_mat['강종'].loc[j] == 'CARBON':
-                            temp_dict['강종'].append('CARBON')
+                            steel_type = 2
                             break
                         elif df_mat['강종'].loc[j] == 'SUS' or 'SUS 304' or 'SUS 321':
-                            temp_dict['강종'].append('SUS')
+                            steel_type = 3
                             break
                 for j in range(len(df_mat.index)):
                     flag_H = 0
@@ -734,7 +738,7 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, s):
                             HT.df['작업일자'].loc[i] == df_mat['작업일자'].loc[j] and \
                             k.split('_')[0] == df_mat['수주번호'].loc[j]:
                         for t in range(len(df_mat_heat)):
-                            dd0 = dt.datetime.strptime(df_mat_heat['1'].loc[t], '%Y-%m-%d %H:%M')
+                            dd0 = dt.datetime.strptime(df_mat_heat['1'].loc[t], '%Y-%m-%d %H:%M:%S')
                             dd0_1 = dt.datetime(year=2019, month=dd0.month, day=dd0.day)
                             dd1_1 = dt.datetime(year=2019, month=dd1.month, day=dd1.day)
                             d_gap = (dd1_1 - dd0_1).total_seconds()
@@ -873,6 +877,26 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, s):
                 temp_dict['에러발생'].append(1)
             else:
                 temp_dict['에러발생'].append(0)
+            if steel_type == 1:
+                temp_dict['강종'].append('ALLOY')
+                temp_dict['강종_ALLOY'].append(1)
+                temp_dict['강종_CARBON'].append(0)
+                temp_dict['강종_SUS'].append(0)
+            elif steel_type == 2:
+                temp_dict['강종'].append('CARBON')
+                temp_dict['강종_ALLOY'].append(0)
+                temp_dict['강종_CARBON'].append(1)
+                temp_dict['강종_SUS'].append(0)
+            elif steel_type == 3:
+                temp_dict['강종'].append('SUS')
+                temp_dict['강종_ALLOY'].append(0)
+                temp_dict['강종_CARBON'].append(0)
+                temp_dict['강종_SUS'].append(1)
+            else:
+                temp_dict['강종'].append('')
+                temp_dict['강종_ALLOY'].append(0)
+                temp_dict['강종_CARBON'].append(0)
+                temp_dict['강종_SUS'].append(0)
         print('index :', i)
     df2 = pd.DataFrame.from_dict(temp_dict)
     df2.to_csv(s, encoding='euc-kr')

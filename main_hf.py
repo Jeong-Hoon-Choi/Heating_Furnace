@@ -243,8 +243,14 @@ def work_set2(curve_type=0):
     hh2.out(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_drop_first_hold')
 
 
-def HF_heating_learning():
-    epoch = 10000
+def HF_heating_learning(model):
+    feature_list = ''
+    if model == 'energy':
+        feature_list = feature_list_0325_3
+    elif model == 'time':
+        feature_list = feature_list_0325_4
+
+    epoch = 20000
     seed_start = 10
     seed_end = 20
 
@@ -258,7 +264,7 @@ def HF_heating_learning():
             df_new = pd.DataFrame()
             for seed1 in range(seed_start, seed_end):
                 x, y = Train_Test_split(df_origin, seed1)
-                for j2 in feature_list_0325_4:
+                for j2 in feature_list:  # Feature list
                     for j in j2:
                         out = []
                         out2 = []
@@ -314,7 +320,7 @@ if __name__ == '__main__':
     # plot_heating_data(view=False)
     # work_press2()     # optional
     # work_set2(curve_type=1)   # 0 = all, 1 = heating curve type 1, 3 = heating curve type 2, 5 = heating curve type 3, 10 = strange heating curve
-    make_heat()
-    furnace_clustering()
-    # HF_heating_learning()
+    # make_heat()
+    # furnace_clustering()
+    HF_heating_learning(model='time')   # energy or time
 

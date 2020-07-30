@@ -25,9 +25,15 @@ def KNN_reg(train_feature, train_label, test_feature, test_label):
     print(len(train_feature), len(test_feature), len(train_label), len(test_label))
     # KNN
     k_range = np.arange(5, int(len(train_feature)*4/5), 5)
+    if k_range.size == 0:
+        k_range = np.append(k_range, int(len(train_feature)/2))
     neigh_dict = {'n_neighbors': k_range}
     my_scorer = make_scorer(mean_absolute_percentage_error, greater_is_better=False)
-    optimize = GridSearchCV(KNeighborsRegressor(weights='distance'), neigh_dict, scoring=my_scorer, cv=5)
+    if int(len(train_feature)) < 5:
+        optimize = GridSearchCV(KNeighborsRegressor(weights='distance'),
+                                neigh_dict, scoring=my_scorer, cv=int(len(train_feature)))
+    else:
+        optimize = GridSearchCV(KNeighborsRegressor(weights='distance'), neigh_dict, scoring=my_scorer, cv=5)
     optimize.fit(train_feature, train_label)
     print("best : ", optimize.best_params_)
     score = optimize.score(test_feature, test_label)
