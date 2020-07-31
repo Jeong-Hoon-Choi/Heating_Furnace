@@ -106,15 +106,8 @@ def make_database2(data, num, h, change_point, phase_list_dict):
         if len([x for x in count if x is not None]) == 2 and heat[i][0] != heat[i][1] and data[heat[i][1]]['TEMPERATURE'] - data[heat[i][0]]['TEMPERATURE'] >= 50:
             drop_flag = 0
             tent_gas = []
-            # if heat[i][7] is None:
-            #     for j in range(heat[i][0] + 1, heat[i][1] + 1):
-            #         tent_gas.append(data[j]['GAS'])
-            # else:
-            #     for j in range(heat[i][7] + 1, heat[i][1] + 1):
-            #         tent_gas.append(data[j]['GAS'])
             for j in range(heat[i][0] + 1, heat[i][1] + 1):
                 tent_gas.append(data[j]['GAS'])
-            # print(len(heat), i)
             if data[heat[i][0]]['GAS_OFF'] == 1 or data[heat[i][1]]['GAS_OFF'] == 1 or \
                     data[heat[i][0]]['TEMP_OFF'] == 1 or data[heat[i][1]]['TEMP_OFF'] == 1 or heat[i][8] == 0 or \
                     heat[i][8] is None:
@@ -142,6 +135,7 @@ def make_database2(data, num, h, change_point, phase_list_dict):
         tolerance_time = 40
         count_flat = 0
         count_increased = 0
+        last_heating = 0
         for j in range(heat[i][0], heat[i][1] + 1):
             if change_point[j] is not None:
                 if start is None:
@@ -180,7 +174,7 @@ def make_database2(data, num, h, change_point, phase_list_dict):
                                     data=np.array([[num, data[start]['TIME'], data[end]['TIME'],
                                                     'heat', data[heat[i][2]]['TIME'], data[start]['TEMPERATURE'],
                                                     data[end]['TEMPERATURE'], heat[i][3], data[heat[i][2]]['TEMPERATURE'],
-                                                    np.sum(tent_gas), heat[i][4], heat[i][5], heat[i][6], heat[i][8],
+                                                    np.sum(tent_gas), heat[i][4], heat[i][5], heat[i][6], 0,
                                                     data[end]['TEMPERATURE'], i, drop_flag, 'holding ' + str(count_flat),
                                                     str(temp_diff), str(time_diff), str(gradient)]]),
                                     columns=['가열로 번호', '시작시간', '종료시간', 'Type', '실제 시작시간', '시작온도',
@@ -212,18 +206,33 @@ def make_database2(data, num, h, change_point, phase_list_dict):
                             temp_diff = abs(data[end]['TEMPERATURE'] - data[start]['TEMPERATURE'])
                             time_diff = (data[end]['TIME'] - data[start]['TIME']).total_seconds() / 3600
                             gradient = temp_diff / time_diff
-                            h.df = h.df.append(
-                                pd.DataFrame(
-                                    data=np.array([[num, data[start]['TIME'], data[end]['TIME'],
-                                                    'heat', data[heat[i][2]]['TIME'], data[start]['TEMPERATURE'],
-                                                    data[end]['TEMPERATURE'], heat[i][3], data[heat[i][2]]['TEMPERATURE'],
-                                                    np.sum(tent_gas), heat[i][4], heat[i][5], heat[i][6], heat[i][8],
-                                                    data[end]['TEMPERATURE'], i, drop_flag, 'increasing ' + str(count_increased),
-                                                    str(temp_diff), str(time_diff), str(gradient)]]),
-                                    columns=['가열로 번호', '시작시간', '종료시간', 'Type', '실제 시작시간', '시작온도',
-                                             '종료온도', '뺄시간', '원래시작점온도', '가스사용량', '가열중 문열림 횟수', '가열중 마지막 문닫힌 시간',
-                                             '최종 가열시작 온도', '이전 종료시간', '가열완료 온도', 'cycle', 'drop_flag', 'part_types',
-                                             'temp diff', 'time diff', 'gradient']), sort=True)
+                            if count_increased == 0:
+                                h.df = h.df.append(
+                                    pd.DataFrame(
+                                        data=np.array([[num, data[start]['TIME'], data[end]['TIME'],
+                                                        'heat', data[heat[i][2]]['TIME'], data[start]['TEMPERATURE'],
+                                                        data[end]['TEMPERATURE'], heat[i][3], data[heat[i][2]]['TEMPERATURE'],
+                                                        np.sum(tent_gas), heat[i][4], heat[i][5], heat[i][6], heat[i][8],
+                                                        data[end]['TEMPERATURE'], i, drop_flag, 'increasing ' + str(count_increased),
+                                                        str(temp_diff), str(time_diff), str(gradient)]]),
+                                        columns=['가열로 번호', '시작시간', '종료시간', 'Type', '실제 시작시간', '시작온도',
+                                                 '종료온도', '뺄시간', '원래시작점온도', '가스사용량', '가열중 문열림 횟수', '가열중 마지막 문닫힌 시간',
+                                                 '최종 가열시작 온도', '이전 종료시간', '가열완료 온도', 'cycle', 'drop_flag', 'part_types',
+                                                 'temp diff', 'time diff', 'gradient']), sort=True)
+                            else:
+                                h.df = h.df.append(
+                                    pd.DataFrame(
+                                        data=np.array([[num, data[start]['TIME'], data[end]['TIME'],
+                                                        'heat', data[heat[i][2]]['TIME'], data[start]['TEMPERATURE'],
+                                                        data[end]['TEMPERATURE'], heat[i][3], data[heat[i][2]]['TEMPERATURE'],
+                                                        np.sum(tent_gas), heat[i][4], heat[i][5], heat[i][6], last_heating,
+                                                        data[end]['TEMPERATURE'], i, drop_flag, 'increasing ' + str(count_increased),
+                                                        str(temp_diff), str(time_diff), str(gradient)]]),
+                                        columns=['가열로 번호', '시작시간', '종료시간', 'Type', '실제 시작시간', '시작온도',
+                                                 '종료온도', '뺄시간', '원래시작점온도', '가스사용량', '가열중 문열림 횟수', '가열중 마지막 문닫힌 시간',
+                                                 '최종 가열시작 온도', '이전 종료시간', '가열완료 온도', 'cycle', 'drop_flag', 'part_types',
+                                                 'temp diff', 'time diff', 'gradient']), sort=True)
+                            last_heating = data[end]['TIME']
                             count_increased += 1
                             h.df = h.df.reset_index(drop=True)
 
@@ -437,53 +446,6 @@ def determine_weekend(h):
             h.df.loc[i, '주말여부'] = '평일'
 
 
-# make data for holding model
-def model_hold(HT, df_mat, s):
-    temp_dict = {'에너지': [], '시간': [], '장입소재개수': [], '장입중량총합': [], '사이클': [],
-                 '장입최대중량': [], '평균온도': [], '가열로 번호': [], '시작시간': [], '종료시간': []}
-    for i in range(len(HT.df.index)):
-        flag = 0
-        if HT.df['Type'].loc[i] == 'hold':
-            d1 = dt.datetime.strptime(HT.df['시작시간'].loc[i], "%Y-%m-%d %H:%M:%S")
-            d2 = dt.datetime.strptime(HT.df['종료시간'].loc[i], "%Y-%m-%d %H:%M:%S")
-            temp_dict['시작시간'].append(d1)
-            temp_dict['종료시간'].append(d2)
-            temp_dict['사이클'].append(HT.df['cycle'].loc[i])
-            t_mean = HT.df['평균온도'].loc[i]
-            t = d2 - d1
-            t = t.total_seconds()
-            nn = HT.df['가열로 번호'].loc[i]
-            if HT.df['소재 list'].loc[i][0] == '':
-                num = 0
-            else:
-                num = len(HT.df['소재 list'].loc[i])
-            list_m = []
-            for k in HT.df['소재 list'].loc[i]:
-                for j in range(len(df_mat.index)):
-                    if HT.df['주/야간'].loc[i] == df_mat['주/야간'].loc[j] and \
-                            HT.df['작업일자'].loc[i] == df_mat['작업일자'].loc[j] and k.split('_')[0] == df_mat['수주번호'].loc[j]:
-                        list_m.append(int(df_mat['투입중량'].loc[j]))
-                        if int(df_mat['투입중량'].loc[j]) == 0:
-                            flag = 1
-                        break
-            temp_dict['에너지'].append(HT.df['가스사용량'].loc[i])
-            temp_dict['시간'].append(t)
-            temp_dict['장입소재개수'].append(num)
-            if flag == 1:
-                temp_dict['장입중량총합'].append(0)
-            else:
-                temp_dict['장입중량총합'].append(np.sum(list_m))
-            if len(list_m) == 0:
-                temp_dict['장입최대중량'].append(0)
-            elif len(list_m) > 0:
-                temp_dict['장입최대중량'].append(np.max(list_m))
-            temp_dict['평균온도'].append(t_mean)
-            temp_dict['가열로 번호'].append(nn)
-        print(i)
-    df2 = pd.DataFrame.from_dict(temp_dict)
-    df2.to_csv(s, encoding='euc-kr')
-
-
 # make data for opening model
 def model_open(HT, df_mat):
     df = pd.DataFrame(columns=['에너지', '시간', '나간소재개수', '나간중량총합', '나간최대중량',
@@ -574,7 +536,7 @@ def model_reheat(HT, df_mat, s):
     temp_dict = {'에너지': [], '시간': [], '시간(0제외)': [], '추가소재유무': [],
                  '들어온소재개수': [], '들어온중량총합': [], '들어온최대중량': [],
                  '장입소재개수': [], '장입중량총합': [], '장입최대중량': [],
-                 '시작온도': [], '가열로 번호': [], '사이클': [], '시작시간': [], '종료시간': []}
+                 '시작온도': [], '가열로 번호': [], 'cycle': [], '시작시간': [], '종료시간': []}
     for i in range(len(HT.df.index)):
         flag = 0
         flag_in = 0
@@ -584,7 +546,7 @@ def model_reheat(HT, df_mat, s):
             d0 = int(HT.df['뺄시간'].loc[i]) * 60
             temp_dict['시작시간'].append(d1)
             temp_dict['종료시간'].append(d2)
-            temp_dict['사이클'].append(HT.df['cycle'].loc[i])
+            temp_dict['cycle'].append(HT.df['cycle'].loc[i])
             t_start = HT.df['시작온도'].loc[i]
             t = d2 - d1
             temp_dict['에너지'].append(HT.df['가스사용량'].loc[i])
@@ -642,6 +604,106 @@ def model_reheat(HT, df_mat, s):
     df2.to_csv(s, encoding='euc-kr')
 
 
+# make data for holding model
+def model_hold(HT, df_mat, s):
+    temp_dict = {'가열로 번호': [], '에너지': [], '시작시간': [], '종료시간': [], '시간(총)': [],
+                 '시작온도': [], '종료온도': [], '장입소재개수': [], '장입중량총합': [], '장입최대중량': [],
+                 '강종': [], '강종_ALLOY': [], '강종_CARBON': [], '강종_SUS': [], 'cycle': [], '평균온도': [],
+                 '에러발생': []}
+    for i in range(len(HT.df.index)):
+        flag = 0
+        flag_E = 0
+        steel_type = 0
+        if HT.df['Type'].loc[i] == 'hold':
+            d1 = dt.datetime.strptime(HT.df['시작시간'].loc[i], "%Y-%m-%d %H:%M:%S")
+            d2 = dt.datetime.strptime(HT.df['종료시간'].loc[i], "%Y-%m-%d %H:%M:%S")
+            temp_dict['시작시간'].append(d1)
+            temp_dict['종료시간'].append(d2)
+            temp_dict['cycle'].append(HT.df['cycle'].loc[i])
+            t_mean = HT.df['평균온도'].loc[i]
+            t = d2 - d1
+            t = t.total_seconds()
+            nn = HT.df['가열로 번호'].loc[i]
+            if HT.df['소재 list'].loc[i][0] == '':
+                num = 0
+            else:
+                num = len(HT.df['소재 list'].loc[i])
+            list_m = []
+            for k in HT.df['소재 list'].loc[i]:
+                temp_len_list = len(list_m)
+                # Steven - Add steel type
+                for j in range(len(df_mat.index)):
+                    if HT.df['주/야간'].loc[i] == df_mat['주/야간'].loc[j] and \
+                            HT.df['작업일자'].loc[i] == df_mat['작업일자'].loc[j] and \
+                            k.split('_')[0] == df_mat['수주번호'].loc[j]:
+                        if type(df_mat['강종'].loc[j]) == float:
+                            flag = 2
+                            break
+                        elif df_mat['강종'].loc[j] == 'ALLOY':
+                            steel_type = 1
+                            break
+                        elif df_mat['강종'].loc[j] == 'CARBON':
+                            steel_type = 2
+                            break
+                        elif df_mat['강종'].loc[j] == 'SUS' or 'SUS 304' or 'SUS 321':
+                            steel_type = 3
+                            break
+                for j in range(len(df_mat.index)):
+                    if HT.df['주/야간'].loc[i] == df_mat['주/야간'].loc[j] and \
+                            HT.df['작업일자'].loc[i] == df_mat['작업일자'].loc[j] and \
+                            k.split('_')[0] == df_mat['수주번호'].loc[j]:
+                        list_m.append(int(df_mat['투입중량'].loc[j]))
+                        if int(df_mat['투입중량'].loc[j]) == 0:
+                            flag = 1
+                        break
+                if temp_len_list == len(list_m):
+                    flag_E = 1
+            temp_dict['에너지'].append(HT.df['가스사용량'].loc[i])
+            temp_dict['시간(총)'].append(t)
+            temp_dict['시작온도'].append(HT.df['시작온도'].loc[i])
+            temp_dict['종료온도'].append(HT.df['종료온도'].loc[i])
+            temp_dict['장입소재개수'].append(num)
+            if flag == 1:
+                temp_dict['장입중량총합'].append(0)
+            else:
+                temp_dict['장입중량총합'].append(np.sum(list_m))
+            if len(list_m) == 0:
+                temp_dict['장입최대중량'].append(0)
+            elif len(list_m) > 0:
+                temp_dict['장입최대중량'].append(np.max(list_m))
+            temp_dict['평균온도'].append(t_mean)
+            temp_dict['가열로 번호'].append(nn)
+            if HT.df['가스사용량'].loc[i] == 0:
+                flag_E = 1
+            if flag_E == 1 or steel_type == 0:
+                temp_dict['에러발생'].append(1)
+            else:
+                temp_dict['에러발생'].append(0)
+            if steel_type == 1:
+                temp_dict['강종'].append('ALLOY')
+                temp_dict['강종_ALLOY'].append(1)
+                temp_dict['강종_CARBON'].append(0)
+                temp_dict['강종_SUS'].append(0)
+            elif steel_type == 2:
+                temp_dict['강종'].append('CARBON')
+                temp_dict['강종_ALLOY'].append(0)
+                temp_dict['강종_CARBON'].append(1)
+                temp_dict['강종_SUS'].append(0)
+            elif steel_type == 3:
+                temp_dict['강종'].append('SUS')
+                temp_dict['강종_ALLOY'].append(0)
+                temp_dict['강종_CARBON'].append(0)
+                temp_dict['강종_SUS'].append(1)
+            else:
+                temp_dict['강종'].append('')
+                temp_dict['강종_ALLOY'].append(0)
+                temp_dict['강종_CARBON'].append(0)
+                temp_dict['강종_SUS'].append(0)
+        print(i)
+    df2 = pd.DataFrame.from_dict(temp_dict)
+    df2.to_csv(s, encoding='euc-kr')
+
+
 # make data for heating model
 def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, s):
     to_day = ['월', '화', '수', '목', '금', '토', '일']
@@ -650,21 +712,21 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, s):
     HT.df = HT.df.reset_index(drop=True)
     print(HT.df)
     # list_mn = [0]*len(sn_list)
-    temp_dict = {'에너지': [], '시간(총)': [], '시간(0제외)': [], '시작온도': [], '종료온도': [],
+    temp_dict = {'가열로번호': [], '에너지': [], '가열시작시간': [], '가열종료시간': [], '시간(총)': [],
+                 '시작온도': [], '종료온도': [], '장입소재개수': [], '장입중량총합': [], '장입최대중량': [],
+                 '강종': [], '강종_ALLOY': [], '강종_CARBON': [], '강종_SUS': [], '쉰시간': [],
                  'A_num': [], 'A_sum': [], 'A_max': [],
                  'C_num': [], 'C_sum': [], 'C_max': [],
                  'S_num': [], 'S_sum': [], 'S_max': [],
                  'H_A_num': [], 'H_A_sum': [], 'H_A_max': [],
                  'H_C_num': [], 'H_C_sum': [], 'H_C_max': [],
                  'H_S_num': [], 'H_S_sum': [], 'H_S_max': [],
-                 '장입소재개수': [], '장입중량총합': [], '장입최대중량': [],
                  '열괴장입소재개수': [], '열괴장입중량총합': [], '열괴장입최대중량': [],
                  '민감소재장입개수': [], '민감소재중량총합': [], '민감소재최대중량': [],
                  '비민감소재장입개수': [], '비민감소재중량총합': [], '비민감소재최대중량': [],
-                 '쉰시간': [], '문열림횟수': [], 'drop': [], '가열로번호': [],
-                 '작업일자': [], '주/야간': [], '가열시작시간': [], '요일': [], '겹침여부': [], '민감비고': [],
-                 '직전 사이클 소재 수량': [], '겹치는 소재 수량': [], '강종종류': [], '주말여부': [], '에러발생': [],
-                 '강종': [], '강종_ALLOY': [], '강종_CARBON': [], '강종_SUS': []}
+                 '문열림횟수': [], 'drop': [], '시간(0제외)': [],
+                 '작업일자': [], '주/야간': [], '요일': [], '겹침여부': [], '민감비고': [],
+                 '직전 사이클 소재 수량': [], '겹치는 소재 수량': [], '강종종류': [], '주말여부': [], '에러발생': []}
     print(len(HT.df.index))
     for i in range(len(HT.df.index)):
         flag = 0
@@ -675,7 +737,12 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, s):
             dd1 = dt.datetime.strptime(HT.df['작업일자'].loc[i], '%Y-%m-%d')
             d1 = dt.datetime.strptime(HT.df['시작시간'].loc[i], "%Y-%m-%d %H:%M:%S")
             d2 = dt.datetime.strptime(HT.df['종료시간'].loc[i], "%Y-%m-%d %H:%M:%S")
-            d3 = dt.datetime.strptime(HT.df['이전 종료시간'].loc[i], "%Y-%m-%d %H:%M:%S")
+            if 'increasing' in str(HT.df['part_types'].loc[i]):
+                d3 = dt.datetime.strptime(HT.df['이전 종료시간'].loc[i], "%Y-%m-%d %H:%M:%S")
+                t2 = (d1 - d3).total_seconds()
+            else:
+                t2 = 0
+            temp_dict['쉰시간'].append(t2)
             d0 = int(HT.df['뺄시간'].loc[i]) * 60
             t_start = HT.df['시작온도'].loc[i]
             t_end = HT.df['종료온도'].loc[i]
@@ -684,6 +751,7 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, s):
             temp_dict['작업일자'].append(HT.df['작업일자'].loc[i])
             temp_dict['주/야간'].append(HT.df['주/야간'].loc[i])
             temp_dict['가열시작시간'].append(HT.df['시작시간'].loc[i])
+            temp_dict['가열종료시간'].append(HT.df['종료시간'].loc[i])
             temp_dict['겹침여부'].append(HT.df['겹침여부'].loc[i])
             temp_dict['시작온도'].append(t_start)
             temp_dict['종료온도'].append(t_end)
@@ -693,9 +761,6 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, s):
             temp_dict['시간(총)'].append(t.total_seconds())
             t = t.total_seconds() - d0
             temp_dict['시간(0제외)'].append(t)
-            t2 = d1 - d3
-            t2 = t2.total_seconds()
-            temp_dict['쉰시간'].append(t2)
             nn = HT.df['가열로 번호'].loc[i]
             temp_dict['가열로번호'].append(nn)
             temp_dict['문열림횟수'].append(int(HT.df['가열중 문열림 횟수'].loc[i]))
@@ -873,7 +938,7 @@ def model_heat_kang_ver_heat(HT, df_mat, df_mat_heat, s_list, ss_list, s):
                 temp_dict['민감비고'].append('민감누락')
             else:
                 temp_dict['민감비고'].append('이상없음')
-            if flag_E == 1:
+            if flag_E == 1 or steel_type == 0:
                 temp_dict['에러발생'].append(1)
             else:
                 temp_dict['에러발생'].append(0)

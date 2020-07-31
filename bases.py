@@ -34,8 +34,8 @@ class HF:
 
     def __init__(self):
         self.index = 0
-        self.df = pd.DataFrame(columns=['가열로 번호', '시작시간', '종료시간', '가스사용량', 'Type', '소재 list',
-                                        '작업일자', '주/야간', 'in', 'out', 'cycle', '평일/주말'])
+        self.df = pd.DataFrame(columns=['가열로 번호', 'cycle', '시작시간', '종료시간', '가스사용량', 'Type', '소재 list',
+                                        '작업일자', '주/야간', '평일/주말', 'in', 'out'])
 
     def in_time(self, df_mat):
         self.df = self.df.sort_values(["시작시간"], ascending=[True])
@@ -176,8 +176,7 @@ class HF:
     def fill(self):
         count_c = 0
         # print(len(self.df.index))
-        empty = "['']"
-        self.df['소재 list'] = self.df['소재 list'].fillna(empty)
+        self.df['소재 list'] = self.df['소재 list'].fillna(np.NaN)
         for i, row in self.df.iterrows():
             # print(i)
             if pd.isna(self.df.loc[i, '소재 list']) and i > 0:
@@ -194,7 +193,8 @@ class HF:
                     self.df.loc[i, '소재 list'] = self.df.loc[i - 1, '소재 list']
             if i > 0:
                 if (self.df.loc[i, 'Type'] == 'heat' and self.df.loc[i - 1, 'Type'] != 'heat') or \
-                        (self.df.loc[i, 'Type'] == 'heat' and self.df.loc[i - 1, 'Type'] == 'heat' and self.df.loc[i, '실제 시작시간'] != self.df.loc[i - 1, '실제 시작시간']):
+                        (self.df.loc[i, 'Type'] == 'heat' and self.df.loc[i - 1, 'Type'] == 'heat' and
+                         self.df.loc[i, '실제 시작시간'] != self.df.loc[i - 1, '실제 시작시간']):
                     count_c += 1
             self.df['cycle'].loc[i] = count_c
             # if self.df['Type'].loc[i] == 'reheat' and self.df['in'].loc[i - 1] != '[]':

@@ -245,9 +245,14 @@ def work_set2(curve_type=0):
 
 def HF_heating_learning(model):
     feature_list = ''
-    if model == 'energy':
-        feature_list = feature_list_0325_3
+    if model == 'energy-increase':
+        print('energy-increase')
+        feature_list = feature_list_0325_3_1
+    elif model == 'energy-holding':
+        print('energy-holding')
+        feature_list = feature_list_0325_3_2
     elif model == 'time':
+        print('time')
         feature_list = feature_list_0325_4
 
     epoch = 20000
@@ -283,16 +288,17 @@ def HF_heating_learning(model):
                                                                            test_label, epoch=epoch, unit=unit,
                                                                            hidden=hidden)
                             out.append(s1)
-                            df_new.loc[
-                                seed1 - seed_start, j[3] + '_MLP_' + str(hidden) + '_' + str(unit) + '_' + j[0]] = out[
-                                len(out) - 1]
+                            df_new.loc[seed1 - seed_start, j[3] + '_MLP_' + str(hidden) + '_' + str(unit) + '_' + j[0]] \
+                                = out[len(out) - 1]
 
                         # KNN
                         knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature, train_label, test_feature, test_label)
                         out2.append(mean_absolute_percentage_error(test_label, knn_test_pred))
+                        df_new.loc[seed1 - seed_start, j[3] + '_KNN_' + str(hidden) + '_' + str(unit) + '_' + j[0]] \
+                            = out2[len(out2) - 1]
 
-                        df_new.loc[seed1 - seed_start, j[3] + '_KNN_' + str(hidden) + '_' + str(unit) + '_' + j[0]] = \
-                        out2[len(out2) - 1]
+                        print('path : ', i2, ' p_bum : ', i)
+                        print('seed : ', seed1, ' feature_list : ', j2)
 
                         # Decision Tree
                         # decision_tree_test_pred, decision_tree_train_pred, dt1 = decision_tree_reg(train_feature, train_label, test_feature, test_label)
@@ -322,5 +328,5 @@ if __name__ == '__main__':
     # work_set2(curve_type=1)   # 0 = all, 1 = heating curve type 1, 3 = heating curve type 2, 5 = heating curve type 3, 10 = strange heating curve
     # make_heat()
     # furnace_clustering()
-    HF_heating_learning(model='time')   # energy or time
+    HF_heating_learning(model='energy-holding')   # energy-increase, energy-holding, time
 

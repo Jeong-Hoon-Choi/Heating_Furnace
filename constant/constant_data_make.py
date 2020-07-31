@@ -22,6 +22,8 @@ work_space = ''
 base_path = './data_202003~202007/'
 time_path = base_path + 'data/start_end_re1.csv'
 sensitive_path = base_path + 'data/sensitive.csv'
-clustering_condition_constant = ['민감만/1h제외', '민감만/1h포함', '민감제외/1h제외', '민감제외/1h포함', '전부/1h제외', '전부/1h포함']
+clustering_condition_constant = ['민감만/1h제외', '민감만/1h포함',
+                                 '민감제외/1h제외', '민감제외/1h포함',
+                                 '전부/1h제외', '전부/1h포함']
 
 df_mat = pd.read_csv(base_path + 'data/' + work_space + 'material_par3.csv', encoding='euc-kr')
