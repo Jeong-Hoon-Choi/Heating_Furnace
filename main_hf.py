@@ -134,6 +134,7 @@ def plot_heating_data(view):
         time_dict, phase_list_dict = fc.find_all(data, change_point, num, start_real, end_real)
         # plotting(data, change_point, time_dict['fixed_start_time_list'], time_dict['fixed_end_time_list'], num,
         #          time_dict['heat_ended_time_list'], time_dict['real_start_time_list'], time_dict['real_end_time_list'])
+        # plt.show()
         plotting_weekly(data, change_point, time_dict['fixed_start_time_list'], time_dict['fixed_end_time_list'], num,
                  time_dict['heat_ended_time_list'], time_dict['real_start_time_list'], time_dict['real_end_time_list'], view)
         # make_database(data, num, h, phase_list_dict)
@@ -180,7 +181,7 @@ def work_set2(curve_type=0):
     hh.out(base_path + 'HF_OUT/last_2019_ffa')
     print('phase 2')
     hhh = ['heat', 'hold', 'open', 'reheat']
-    # hhh = ['heat']
+    # hhh = ['hold']
     for i in hhh:
         print(i)
         h2 = HF()
@@ -243,10 +244,10 @@ def work_set2(curve_type=0):
     hh2.out(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_drop_first_hold')
 
 
-def HF_heating_learning(model):
+def HF_learning(model):
     feature_list = ''
-    if model == 'energy-increase':
-        print('energy-increase')
+    if model == 'energy-increasing':
+        print('energy-increasing')
         feature_list = feature_list_0325_3_1
     elif model == 'energy-holding':
         print('energy-holding')
@@ -254,6 +255,9 @@ def HF_heating_learning(model):
     elif model == 'time':
         print('time')
         feature_list = feature_list_0325_4
+    else:
+        print('wrong model')
+        exit(0)
 
     epoch = 20000
     seed_start = 10
@@ -263,8 +267,8 @@ def HF_heating_learning(model):
         print(i2)
         # for i in [p_bum[4]]:
         for i in p_bum:
-            df_origin = pd.read_csv(base_path + 'analysis/for_learning/' + str(i2[0]) + '/' + str(i) + '.csv',
-                                    encoding='euc-kr', index_col=0)
+            df_origin = pd.read_csv(base_path + 'analysis/for_learning_' + str(model) + '/' + str(i2[0]) +
+                                    '/' + str(i) + '.csv', encoding='euc-kr', index_col=0)
             print(i2, i, '개수', len(df_origin.index))
             df_new = pd.DataFrame()
             for seed1 in range(seed_start, seed_end):
@@ -284,7 +288,7 @@ def HF_heating_learning(model):
                         # MLP
                         for hidden, unit in [[5, 5]]:
                             print('seed : ', seed1, 'epoch : ', epoch, 'unit : ', unit, 'hidden : ', hidden)
-                            s1, mlp_test_pred, mlp_train_pred, model = MLP(train_feature, train_label, test_feature,
+                            s1, mlp_test_pred, mlp_train_pred, data_model = MLP(train_feature, train_label, test_feature,
                                                                            test_label, epoch=epoch, unit=unit,
                                                                            hidden=hidden)
                             out.append(s1)
@@ -316,17 +320,20 @@ def HF_heating_learning(model):
                 print(arr_avg)
                 df_new.loc[seed_end - seed_start, i0] = np.average(arr_avg)
             df_new = df_new.rename(index={seed_end - seed_start: 'average'})
-            df_new.to_csv(base_path + 'model_result/' + str(i2[0]) + '/result_' + str(i) + '1.csv', encoding='euc-kr')
+            df_new.to_csv(base_path + 'model_result/model_result_' + str(epoch) + '_' + str(model) +'/' +
+                          str(i2[0]) + '/result_' + str(i) + '1.csv', encoding='euc-kr')
 
 
 if __name__ == '__main__':
     # get_data()
     # summarize_heating_data()
 
+    model = 'time'   # energy-increasing, energy-holding, time
+
     # plot_heating_data(view=False)
     # work_press2()     # optional
     # work_set2(curve_type=1)   # 0 = all, 1 = heating curve type 1, 3 = heating curve type 2, 5 = heating curve type 3, 10 = strange heating curve
-    # make_heat()
-    # furnace_clustering()
-    HF_heating_learning(model='energy-holding')   # energy-increase, energy-holding, time
+    # make_heat_or_hold(model=model)
+    # furnace_clustering2(model=model)
+    HF_learning(model=model)
 

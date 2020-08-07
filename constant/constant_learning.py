@@ -1,16 +1,26 @@
+# feature_0323_5 = ['장입중량총합', '장입최대중량', '장입소재개수', '쉰시간',
+#                   '시작온도', '종료온도', '시간(총)', '강종_ALLOY', '강종_CARBON', '강종_SUS']
+# feature_0323_6 = ['장입중량총합', '장입최대중량', '장입소재개수',
+#                   '시작온도', '종료온도', '시간(총)', '강종_ALLOY', '강종_CARBON', '강종_SUS']
 feature_0323_5 = ['장입중량총합', '장입최대중량', '장입소재개수', '쉰시간',
-                  '시작온도', '종료온도', '시간(총)', '강종_ALLOY', '강종_CARBON', '강종_SUS']
+                  '시작온도', '종료온도', '시간(총)']
 feature_0323_6 = ['장입중량총합', '장입최대중량', '장입소재개수',
-                  '시작온도', '종료온도', '시간(총)', '강종_ALLOY', '강종_CARBON', '강종_SUS']
+                  '시작온도', '종료온도', '시간(총)']
+feature_0323_6_2 = ['장입중량총합', '장입최대중량', '장입소재개수', '시작온도', '시간(총)']
 feature_list_0323_5 = [['에너지', feature_0323_5, None, '쉰시간포함']]
 feature_list_0323_6 = [['에너지', feature_0323_6, None, '쉰시간제외']]
+feature_list_0323_6_2 = [['에너지', feature_0323_6_2, None, '쉰시간제외']]
 feature_list_0325_3_1 = [feature_list_0323_5, feature_list_0323_6]    # Energy Increasing Part
-feature_list_0325_3_2 = [feature_list_0323_6]    # Energy Holding Part
+feature_list_0325_3_2 = [feature_list_0323_6_2]    # Energy Holding Part
 
+# feature_0323_7 = ['장입중량총합', '장입최대중량', '장입소재개수', '쉰시간',
+#                   '시작온도', '종료온도', '강종_ALLOY', '강종_CARBON', '강종_SUS']
+# feature_0323_8 = ['장입중량총합', '장입최대중량', '장입소재개수',
+#                   '시작온도', '종료온도', '강종_ALLOY', '강종_CARBON', '강종_SUS']
 feature_0323_7 = ['장입중량총합', '장입최대중량', '장입소재개수', '쉰시간',
-                  '시작온도', '종료온도', '강종_ALLOY', '강종_CARBON', '강종_SUS']
+                  '시작온도', '종료온도']
 feature_0323_8 = ['장입중량총합', '장입최대중량', '장입소재개수',
-                  '시작온도', '종료온도', '강종_ALLOY', '강종_CARBON', '강종_SUS']
+                  '시작온도', '종료온도']
 feature_list_0323_7 = [['시간(총)', feature_0323_7, None, '쉰시간포함']]
 feature_list_0323_8 = [['시간(총)', feature_0323_8, None, '쉰시간제외']]
 feature_list_0325_4 = [feature_list_0323_7, feature_list_0323_8]    # Minimum Required Time

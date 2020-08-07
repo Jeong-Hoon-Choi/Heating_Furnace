@@ -400,9 +400,9 @@ def module_door_close(WINDOW_DATA, current, change_point, i, thr, time_dict, sta
 
     # 재가열 완료
     elif check_reheat_end(find_change_point_dict, WINDOW_DATA, current, i, thr, time_dict):
-        # change_point[find_change_point_dict['door_close_estimate']['index']] = find_change_point_dict['door_close_estimate']['now']['TEMPERATURE']
-        # change_point[find_change_point_dict['door_open_save']['index']] = find_change_point_dict['door_open_save']['now']['TEMPERATURE']
-        # change_point[find_change_point_dict['reheat_end_candidate']['index']] = find_change_point_dict['reheat_end_candidate']['now']['TEMPERATURE']
+        change_point[find_change_point_dict['door_close_estimate']['index']] = find_change_point_dict['door_close_estimate']['now']['TEMPERATURE']
+        change_point[find_change_point_dict['door_open_save']['index']] = find_change_point_dict['door_open_save']['now']['TEMPERATURE']
+        change_point[find_change_point_dict['reheat_end_candidate']['index']] = find_change_point_dict['reheat_end_candidate']['now']['TEMPERATURE']
         phase_list_dict['open'].append([find_change_point_dict['door_open_save']['index'],
                                         find_change_point_dict['door_close_estimate']['index'],
                                         find_change_point_dict['reheat_end_candidate']['index']])

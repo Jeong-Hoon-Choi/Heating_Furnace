@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import math
 from constant.constant_data_make import *
 from constant.constant_learning import *
 import matplotlib.pyplot as plt
@@ -26,7 +27,7 @@ def KNN_reg(train_feature, train_label, test_feature, test_label):
     # KNN
     k_range = np.arange(5, int(len(train_feature)*4/5), 5)
     if k_range.size == 0:
-        k_range = np.append(k_range, int(len(train_feature)/2))
+        k_range = np.append(k_range, math.ceil(len(train_feature)/2))
     neigh_dict = {'n_neighbors': k_range}
     my_scorer = make_scorer(mean_absolute_percentage_error, greater_is_better=False)
     if int(len(train_feature)) < 5:

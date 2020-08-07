@@ -202,6 +202,7 @@ class HF:
             if self.df['Type'].loc[i] != 'heat' and i is not 0:
                 self.df['작업일자'].loc[i] = self.df['작업일자'].loc[i - 1]
                 self.df['주/야간'].loc[i] = self.df['주/야간'].loc[i - 1]
+        self.df['소재 list'] = self.df['소재 list'].fillna('[]')
 
     def set_cycle(self):
         count_c = 0
