@@ -405,8 +405,12 @@ def handle_first_hold(h1, work, s):
                     end = dt.datetime.strptime(h1.df['종료시간'].loc[i], "%Y-%m-%d %H:%M:%S")
                     start = dt.datetime.strptime(h1.df['시작시간'].loc[i], "%Y-%m-%d %H:%M:%S")
                     dis = (end - start).total_seconds() / 60
+                    tolerance_time = 30
                     # print(dis)
-                    if dis > 30:
+                    start_temp = h1.df['시작온도'].loc[i]
+                    end_temp = h1.df['종료온도'].loc[i]
+                    tolerance_temp = 50
+                    if dis > tolerance_time and abs(end_temp - start_temp) < tolerance_temp:
                         df_temp = df_temp.append(row)
                         df_temp = df_temp.reset_index(drop=True)
                         del_arr.append(i)
@@ -728,8 +732,20 @@ def model_hold_kang_ver_hold(HT, HT2, df_mat, df_mat_heat, s_list, ss_list, s):
                 temp_dict['강종_ALLOY'].append(0)
                 temp_dict['강종_CARBON'].append(0)
                 temp_dict['강종_SUS'].append(0)
-        print(i)
+        print('holding period data', i)
     for i in range(len(HT2.df.index)):
+        end = dt.datetime.strptime(HT2.df['종료시간'].loc[i], "%Y-%m-%d %H:%M:%S")
+        start = dt.datetime.strptime(HT2.df['시작시간'].loc[i], "%Y-%m-%d %H:%M:%S")
+        dis = (end - start).total_seconds() / 60
+        tolerance_time = 30
+        start_temp = HT2.df['시작온도'].loc[i]
+        end_temp = HT2.df['종료온도'].loc[i]
+        tolerance_temp = 50
+        energy = HT2.df['가스사용량'].loc[i]
+        tolerance_energy = 100
+        if dis <= tolerance_time or abs(end_temp - start_temp) >= tolerance_temp or energy <= tolerance_energy:
+            continue
+
         flag = 0
         flag_E = 0
         flag_S = 0
@@ -845,7 +861,7 @@ def model_hold_kang_ver_hold(HT, HT2, df_mat, df_mat_heat, s_list, ss_list, s):
                 temp_dict['강종_ALLOY'].append(0)
                 temp_dict['강종_CARBON'].append(0)
                 temp_dict['강종_SUS'].append(0)
-        print(i)
+        print('holding phase data', i)
     df2 = pd.DataFrame.from_dict(temp_dict)
     df2.to_csv(s, encoding='euc-kr')
 

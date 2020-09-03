@@ -248,10 +248,14 @@ def HF_learning(model):
     feature_list = ''
     if model == 'energy-increasing':
         print('energy-increasing')
-        feature_list = feature_list_0325_3_1
+        # feature_list = feature_list_0325_3_1
+        # feature_list = feature_list_0325_time_only
+        feature_list = feature_list_0325_3_3
     elif model == 'energy-holding':
         print('energy-holding')
-        feature_list = feature_list_0325_3_2
+        # feature_list = feature_list_0325_3_2
+        # feature_list = feature_list_0325_time_only
+        feature_list = feature_list_0325_3_3
     elif model == 'time':
         print('time')
         feature_list = feature_list_0325_4
@@ -264,7 +268,6 @@ def HF_learning(model):
     seed_end = 20
 
     for i2 in path_1:
-        print(i2)
         # for i in [p_bum[4]]:
         for i in p_bum:
             df_origin = pd.read_csv(base_path + 'analysis/for_learning_' + str(model) + '/' + str(i2[0]) +
@@ -278,7 +281,33 @@ def HF_learning(model):
                         out = []
                         out2 = []
                         out3 = []
-                        train_feature, train_label, test_feature, test_label = data_manipulate_normal3(x, y, j[0], j[1], j[2], seed1)
+
+                        if model == 'energy-increasing':
+                            if i == 1:
+                                j[1] = ['종료온도', '시간(총)']
+                                j[3] = '종료온도_시간(총)'
+                            elif i == 18 or i == 19 or i == 20:
+                                j[1] = ['시작온도', '시간(총)']
+                                j[3] = '시작온도_시간(총)'
+                            else:
+                                j[1] = ['시간(총)']
+                                j[3] = '시간(총)'
+                        if model == 'energy-holding':
+                            if i == 4:
+                                j[1] = ['장입최대중량', '시간(총)']
+                                j[3] = '장입최대중량_시간(총)'
+                            elif i == 5:
+                                j[1] = ['시작온도', '시간(총)']
+                                j[3] = '시작온도_시간(총)'
+                            elif i == 13:
+                                j[1] = ['종료온도', '시간(총)']
+                                j[3] = '종료온도_시간(총)'
+                            else:
+                                j[1] = ['시간(총)']
+                                j[3] = '시간(총)'
+
+                        train_feature, train_label, test_feature, test_label = \
+                            data_manipulate_normal3(x, y, j[0], j[1], j[2], seed1)
                         # data_manipulate_no_split(df_origin, j[0], j[1])
                         # data_manipulate_pca(origin2, j[0], j[1], seed1)
                         print(train_feature)
@@ -296,13 +325,12 @@ def HF_learning(model):
                                 = out[len(out) - 1]
 
                         # KNN
-                        knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature, train_label, test_feature, test_label)
-                        out2.append(mean_absolute_percentage_error(test_label, knn_test_pred))
-                        df_new.loc[seed1 - seed_start, j[3] + '_KNN_' + str(hidden) + '_' + str(unit) + '_' + j[0]] \
-                            = out2[len(out2) - 1]
+                        # knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature, train_label, test_feature, test_label)
+                        # out2.append(mean_absolute_percentage_error(test_label, knn_test_pred))
+                        # df_new.loc[seed1 - seed_start, j[3] + '_KNN_' + j[0]] = out2[len(out2) - 1]
 
-                        print('path : ', i2, ' p_bum : ', i)
-                        print('seed : ', seed1, ' feature_list : ', j2)
+                        # print('path : ', i2, ' p_bum : ', i)
+                        # print('seed : ', seed1, ' feature_list : ', j2)
 
                         # Decision Tree
                         # decision_tree_test_pred, decision_tree_train_pred, dt1 = decision_tree_reg(train_feature, train_label, test_feature, test_label)
@@ -318,9 +346,188 @@ def HF_learning(model):
                     if not pd.isna(df_new.loc[i01, i0]):
                         arr_avg.append(float(df_new.loc[i01, i0]))
                 print(arr_avg)
+
                 df_new.loc[seed_end - seed_start, i0] = np.average(arr_avg)
             df_new = df_new.rename(index={seed_end - seed_start: 'average'})
-            df_new.to_csv(base_path + 'model_result/model_result_' + str(epoch) + '_' + str(model) +'/' +
+            df_new.to_csv(base_path + 'model_result/model_result_' + str(epoch) + '_' + str(model) + '/' +
+                          str(i2[0]) + '/result_' + str(i) + '1.csv', encoding='euc-kr')
+
+
+def HF_learning_result_check(model):
+    feature_list = ''
+    if model == 'energy-increasing':
+        print('energy-increasing')
+        feature_list = feature_list_0325_3_1
+    elif model == 'energy-holding':
+        print('energy-holding')
+        feature_list = feature_list_0325_3_2
+    elif model == 'time':
+        print('time')
+        feature_list = feature_list_0325_4
+    else:
+        print('wrong model')
+        exit(0)
+
+    epoch = 20000
+    seed_start = 10
+    seed_end = 20
+
+    for i2 in path_1:
+        # for i in [p_bum[4]]:
+        for i in p_bum:
+            df_origin = pd.read_csv(base_path + 'analysis/for_learning_' + str(model) + '/' + str(i2[0]) +
+                                    '/' + str(i) + '.csv', encoding='euc-kr', index_col=0)
+            print(i2, i, '개수', len(df_origin.index))
+            df_result = pd.DataFrame()
+            for seed1 in range(seed_start, seed_end):
+                x, y = Train_Test_split(df_origin, seed1)
+                for j2 in feature_list:  # Feature list
+                    for j in j2:
+                        out = []
+                        out2 = []
+                        out3 = []
+                        y_feature = y[j[1]]
+                        y_feature = y_feature.reset_index(drop=True)
+                        train_feature, train_label, test_feature, test_label = \
+                            data_manipulate_normal3(x, y, j[0], j[1], j[2], seed1)
+                        # data_manipulate_no_split(df_origin, j[0], j[1])
+                        # data_manipulate_pca(origin2, j[0], j[1], seed1)
+                        print(train_feature)
+                        train_label = train_label.reset_index(drop=True)
+                        test_label = test_label.reset_index(drop=True)
+
+                        # MLP
+                        for hidden, unit in [[5, 5]]:
+                            print('seed : ', seed1, 'epoch : ', epoch, 'unit : ', unit, 'hidden : ', hidden)
+                            s1, mlp_test_pred, mlp_train_pred, data_model = MLP(train_feature, train_label, test_feature,
+                                                                           test_label, epoch=epoch, unit=unit,
+                                                                           hidden=hidden)
+                            out.append(s1)
+
+                        # KNN
+                        knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature, train_label, test_feature, test_label)
+                        out2.append(mean_absolute_percentage_error(test_label, knn_test_pred))
+
+                        print('path : ', i2, ' p_bum : ', i)
+                        print('seed : ', seed1, ' feature_list : ', j2)
+
+                        # df_result.append(y_feature)
+                        df_result = df_result.append(
+                            pd.DataFrame(data=y_feature, columns=y_feature.columns), ignore_index=True)
+                        # df_result.reset_index(drop=True)
+                        z = len(df_result.index) - len(test_label.index)
+                        for k in range(len(test_label.index)):
+                            df_result.loc[z, 'REAL'] = test_label['에너지'].loc[k]
+                            df_result.loc[z, 'MLP'] = mlp_test_pred[k]
+                            df_result.loc[z, 'error_MLP'] = abs(test_label['에너지'].loc[k] - mlp_test_pred[k])
+                            df_result.loc[z, 'KNN'] = knn_test_pred[k]
+                            df_result.loc[z, 'error_KNN'] = abs(test_label['에너지'].loc[k] - knn_test_pred[k])
+                            start_temp = df_result.loc[z, '시작온도']
+                            if start_temp > 1000:
+                                df_result.loc[z, 'Type'] = 'Holding Phase'
+                            else:
+                                df_result.loc[z, 'Type'] = 'Holding Period'
+                            z += 1
+            df_result.to_csv(base_path + 'model_result/check_result_' + str(epoch) + '_' + str(model) +'/' +
+                          str(i2[0]) + '/result_' + str(i) + '1.csv', encoding='euc-kr')
+
+
+def wrapper_feature_selection(model):
+    feature_list = ''
+    if model == 'energy-increasing':
+        print('energy-increasing')
+        feature_list = feature_list_0325_3_3
+    elif model == 'energy-holding':
+        print('energy-holding')
+        feature_list = feature_list_0325_3_3
+    else:
+        print('wrong model')
+        exit(0)
+
+    epoch = 20000
+    seed_start = 15
+    seed_end = 20
+
+    for i2 in path_1:
+        for i in p_bum:
+            df_origin = pd.read_csv(base_path + 'analysis/for_learning_' + str(model) + '/' + str(i2[0]) +
+                                    '/' + str(i) + '.csv', encoding='euc-kr', index_col=0)
+            print(i2, i, '개수', len(df_origin.index))
+            df_new = pd.DataFrame()
+            for seed1 in range(seed_start, seed_end):
+                x, y = Train_Test_split(df_origin, seed1)
+                for j2 in feature_list:  # Feature list
+                    for j in j2:
+                        # feature = df_origin[j[1]]
+                        # label = df_origin[j[0]]
+                        train_feature, train_label, test_feature, test_label = \
+                            data_manipulate_normal3(x, y, j[0], j[1], None, seed1)
+                        train_label = train_label.reset_index(drop=True)
+                        test_label = test_label.reset_index(drop=True)
+                        label = train_label[j[0]]
+
+                        # Sequential Forward Selection(sfs) - MLP
+                        my_scorer = make_scorer(mean_absolute_percentage_error, greater_is_better=False)
+                        sfs = SFS(MLPRegressor(hidden_layer_sizes=(5, ), max_iter=epoch), k_features=(1, 6),
+                                  forward=True, floating=False, scoring=my_scorer, cv=3)
+                        sfs.fit(train_feature, label)
+                        sbs = SFS(MLPRegressor(hidden_layer_sizes=(5, ), max_iter=epoch), k_features=(1, 6),
+                                  forward=False, floating=False, scoring=my_scorer, cv=3)
+                        sbs.fit(train_feature, label)
+                        feature_result_mlp_sfs = sfs.k_feature_names_
+                        feature_result_mlp_sbs = sbs.k_feature_names_
+
+                        train_feature_sfs = train_feature[list(feature_result_mlp_sfs)]
+                        test_feature_sfs = test_feature[list(feature_result_mlp_sfs)]
+                        train_feature_sbs = train_feature[list(feature_result_mlp_sbs)]
+                        test_feature_sbs = test_feature[list(feature_result_mlp_sbs)]
+
+                        # MLP
+                        for hidden, unit in [[5, 5]]:
+                            s1, mlp_test_pred, mlp_train_pred, data_model = \
+                                MLP(train_feature_sfs, train_label, test_feature_sfs, test_label,
+                                    epoch=epoch, unit=unit, hidden=hidden)
+                            df_new.loc[seed1 - seed_start, 'forward'] \
+                                = str(list(feature_result_mlp_sfs))
+                            df_new.loc[seed1 - seed_start, 'f_' + j[3] + '_MLP_' + str(hidden) + '_' + str(unit) + '_' + j[0]] \
+                                = s1
+
+                            s1, mlp_test_pred, mlp_train_pred, data_model = \
+                                MLP(train_feature_sbs, train_label, test_feature_sbs, test_label,
+                                    epoch=epoch, unit=unit, hidden=hidden)
+                            df_new.loc[seed1 - seed_start, 'backward'] \
+                                = str(list(feature_result_mlp_sbs))
+                            df_new.loc[seed1 - seed_start, 'b_' + j[3] + '_MLP_' + str(hidden) + '_' + str(unit) + '_' + j[0]] \
+                                = s1
+
+                        # # Sequential Forward Selection(sfs) - KNN
+                        # my_scorer = make_scorer(mean_absolute_percentage_error, greater_is_better=False)
+                        # sfs = SFS(KNeighborsRegressor(weights='distance'), k_features=(1, 6),
+                        #           forward=True, floating=False, scoring=my_scorer, cv=5)
+                        # sfs.fit(feature, label)
+                        # feature_result_knn = sfs.k_feature_names_
+                        #
+                        # train_feature, train_label, test_feature, test_label = \
+                        #     data_manipulate_normal3(x, y, j[0], list(feature_result_knn), None, 0)
+                        # print(train_feature)
+                        # train_label = train_label.reset_index(drop=True)
+                        # test_label = test_label.reset_index(drop=True)
+                        #
+                        # # KNN
+                        # knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature, train_label, test_feature, test_label)
+                        # result = mean_absolute_percentage_error(test_label, knn_test_pred)
+
+            for i0 in df_new.columns:
+                print(i0)
+                arr_avg = []
+                for i01, ro2 in df_new.iterrows():
+                    if not pd.isna(df_new.loc[i01, i0]) and not isinstance(df_new.loc[i01, i0], str):
+                        arr_avg.append(float(df_new.loc[i01, i0]))
+                print(arr_avg)
+
+                df_new.loc[seed_end - seed_start, i0] = np.average(arr_avg)
+            df_new = df_new.rename(index={seed_end - seed_start: 'average'})
+            df_new.to_csv(base_path + 'model_result/model_result_' + str(epoch) + '_' + str(model) + '/' +
                           str(i2[0]) + '/result_' + str(i) + '1.csv', encoding='euc-kr')
 
 
@@ -328,12 +535,15 @@ if __name__ == '__main__':
     # get_data()
     # summarize_heating_data()
 
-    model = 'time'   # energy-increasing, energy-holding, time
-
     # plot_heating_data(view=False)
     # work_press2()     # optional
     # work_set2(curve_type=1)   # 0 = all, 1 = heating curve type 1, 3 = heating curve type 2, 5 = heating curve type 3, 10 = strange heating curve
+
+    model = 'energy-increasing'   # energy-increasing, energy-holding, time
+
     # make_heat_or_hold(model=model)
     # furnace_clustering2(model=model)
     HF_learning(model=model)
+    # wrapper_feature_selection(model=model)
 
+    # HF_learning_result_check(model=model)

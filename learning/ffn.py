@@ -2,7 +2,6 @@ from tensorflow.keras import backend as K
 import tensorflow as tf
 from tensorflow.keras import layers
 import numpy as np
-from tensorflow.keras.utils import plot_model
 from tensorflow.keras.models import load_model
 import matplotlib.pyplot as plt
 

@@ -8,4 +8,9 @@ if __name__ == '__main__':
     # make_heat()
     # furnace_clustering()
     # HF_heating_module()
-    HF_learning(model='energy-increasing')
+
+    model = 'time'  # energy-increasing, energy-holding, time
+
+    # make_heat_or_hold(model=model)
+    # furnace_clustering2(model=model)
+    HF_learning(model=model)

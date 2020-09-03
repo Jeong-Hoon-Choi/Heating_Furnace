@@ -6,6 +6,7 @@ from learning.learning_mod import *
 from constant.constant_data_make import *
 from bases import plotting
 import matplotlib.pyplot as plt
+from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 
 
 # ------------------------------ make data ---------------------------------
@@ -112,7 +113,9 @@ def make_heat_or_hold(model):
         HT_heat.change_list2()
 
         HT_hold = HF()
-        HT_hold.df = pd.read_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_first_hold.csv',
+        # HT_hold.df = pd.read_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_first_hold.csv',
+        #                          encoding='euc-kr', index_col=0)
+        HT_hold.df = pd.read_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_hold.csv',
                                  encoding='euc-kr', index_col=0)
         HT_hold.df = HT_hold.df.reset_index(drop=True)
         HT_hold.change_list2()

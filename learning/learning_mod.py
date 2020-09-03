@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics.scorer import make_scorer
 from sklearn.neighbors import KNeighborsRegressor
+from sklearn.neural_network import MLPRegressor
 from sklearn import ensemble
 from sklearn.tree import DecisionTreeRegressor
 
@@ -45,8 +46,9 @@ def KNN_reg(train_feature, train_label, test_feature, test_label):
 # MLP
 def MLP(train_feature, train_label, test_feature, test_label, epoch=2000, unit=30, hidden=5, s=None, s3=0):
     print(len(train_feature), len(test_feature), len(train_label), len(test_label))
-
-    model_F = FFN(train_feature.shape[1], train_feature, train_label, test_feature, test_label, epoch, unit, hidden, s, check_seed=s3)
+    # MLP
+    model_F = FFN(train_feature.shape[1], train_feature, train_label, test_feature, test_label,
+                  epoch, unit, hidden, s, check_seed=s3)
     score, test_pred, m = model_F.run()
     train_pred = m.predict(x=train_feature)
     return score, test_pred, train_pred, m
