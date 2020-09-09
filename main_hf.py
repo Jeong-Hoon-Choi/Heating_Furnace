@@ -283,23 +283,23 @@ def HF_learning(model):
                         out3 = []
 
                         if model == 'energy-increasing':
-                            if i == 1:
+                            if i == [1]:
                                 j[1] = ['종료온도', '시간(총)']
                                 j[3] = '종료온도_시간(총)'
-                            elif i == 18 or i == 19 or i == 20:
+                            elif i == [18] or i == [19] or i == [20]:
                                 j[1] = ['시작온도', '시간(총)']
                                 j[3] = '시작온도_시간(총)'
                             else:
                                 j[1] = ['시간(총)']
                                 j[3] = '시간(총)'
                         if model == 'energy-holding':
-                            if i == 4:
+                            if i == [4]:
                                 j[1] = ['장입최대중량', '시간(총)']
                                 j[3] = '장입최대중량_시간(총)'
-                            elif i == 5:
+                            elif i == [5]:
                                 j[1] = ['시작온도', '시간(총)']
                                 j[3] = '시작온도_시간(총)'
-                            elif i == 13:
+                            elif i == [13]:
                                 j[1] = ['종료온도', '시간(총)']
                                 j[3] = '종료온도_시간(총)'
                             else:
@@ -314,8 +314,38 @@ def HF_learning(model):
                         train_label = train_label.reset_index(drop=True)
                         test_label = test_label.reset_index(drop=True)
 
+                        layer = []
+                        layer.append([5, 5])
+                        if model == 'energy-increasing':
+                            if i == [2]:
+                                layer.append([2, 2])
+                            elif i == [4]:
+                                layer.append([6, 6])
+                            elif i == [5]:
+                                layer.append([5, 3])
+                            elif i == [13]:
+                                layer.append([1, 3])
+                            elif i == [18]:
+                                layer.append([9, 9])
+                            elif i == [19]:
+                                layer.append([10, 10])
+                            else:
+                                layer.append([7, 7])
+                        if model == 'energy-holding':
+                            if i == [3] or i == [18]:
+                                layer.append([6, 6])
+                            elif i == [4] or i == [20]:
+                                layer.append([4, 4])
+                            elif i == [17]:
+                                layer.append([3, 5])
+                            elif i == [2]:
+                                layer.append([5, 3])
+                            else:
+                                layer.append([3, 3])
+
                         # MLP
-                        for hidden, unit in [[5, 5]]:
+                        # for hidden, unit in [[5, 5]]:
+                        for hidden, unit in layer:
                             print('seed : ', seed1, 'epoch : ', epoch, 'unit : ', unit, 'hidden : ', hidden)
                             s1, mlp_test_pred, mlp_train_pred, data_model = MLP(train_feature, train_label, test_feature,
                                                                            test_label, epoch=epoch, unit=unit,
@@ -325,9 +355,9 @@ def HF_learning(model):
                                 = out[len(out) - 1]
 
                         # KNN
-                        # knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature, train_label, test_feature, test_label)
-                        # out2.append(mean_absolute_percentage_error(test_label, knn_test_pred))
-                        # df_new.loc[seed1 - seed_start, j[3] + '_KNN_' + j[0]] = out2[len(out2) - 1]
+                        knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature, train_label, test_feature, test_label)
+                        out2.append(mean_absolute_percentage_error(test_label, knn_test_pred))
+                        df_new.loc[seed1 - seed_start, j[3] + '_KNN_' + j[0]] = out2[len(out2) - 1]
 
                         # print('path : ', i2, ' p_bum : ', i)
                         # print('seed : ', seed1, ' feature_list : ', j2)
