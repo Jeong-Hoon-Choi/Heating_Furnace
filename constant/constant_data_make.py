@@ -9,13 +9,6 @@ p_all2 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 p_bum = [[1], [2], [3], [4], [5], [6], [13], [17], [18], [19], [20]]
 # p_bum = [[1, 2, 3, 4, 5, 6, 13, 17, 18, 19, 20], [2, 3, 4, 5, 6], [2, 3], [4, 5, 6], [17, 18, 19, 20]]
 
-# p_bum = [[1, 2, 3, 4, 5, 6, 13, 17, 18, 19, 20]]
-# p_bum = [[1]]
-# p_bum = [[2, 3, 4, 5, 6]]
-# p_bum = [[2, 3]]
-# p_bum = [[4, 5, 6]]
-# p_bum = [[17, 18, 19, 20]]
-
 TIME_MARGIN = 10
 HALF_MARGIN = 5
 GAS_CONDITION_WINDOW = 3
@@ -26,7 +19,8 @@ work_ = p_all
 work_space = ''
 
 # base_path = './data_201907~202003/'     # 2019
-base_path = './data_202003~202007/'   # 2020
+# base_path = './data_202003~202007/'   # 2020 - old
+base_path = './data_202001~202009/'   # 2020
 
 time_path = base_path + 'data/start_end_re1.csv'
 sensitive_path = base_path + 'data/sensitive.csv'

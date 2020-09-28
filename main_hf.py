@@ -1,5 +1,6 @@
 from module import *
 import pandas as pd
+import os
 
 
 def plot_heating_flat(num, df, data, change_point, phase_list_dict):
@@ -121,6 +122,55 @@ def summarize_heating_data():
     datas.to_csv(base_path + "HF_OUT/hf_heating_summary.csv", mode='w', encoding='euc-kr')
 
 
+def check_data():
+    for j in work_:
+        h = HF()
+        h.df = pd.read_csv(base_path + 'HF_OUT/hf_2020_' + str(j) + '.csv', encoding='euc-kr', index_col=0)
+        h2 = HF()
+        h2.df['STATUS'] = ""
+        for i in range(len(h.df.index)):
+            if h.df['Type'].loc[i] == 'heat':
+                h2.df = h2.df.append(h.df.loc[i])
+                if len(h2.df['소재 list'].loc[i]) == 2:
+                    h2.df['STATUS'].loc[i] = 'NO MATERIAL'
+                elif h2.df['drop_flag'].loc[i] == 1:
+                    h2.df['STATUS'].loc[i] = 'GAS OFF/TEMP OFF'
+                elif h2.df['가열중 문열림 횟수'].loc[i] > 0:
+                    h2.df['STATUS'].loc[i] = 'DOOR OPENED WHILE HEATING'
+                else:
+                    h2.df['STATUS'].loc[i] = 'OK'
+        h2.df = h2.df.reset_index(drop=True)
+        h2.df.to_csv(base_path + 'HF_OUT/check_2020_' + str(j) + '.csv', encoding='euc-kr')
+
+
+def check_real_start_time():
+    df_t = pd.read_csv(base_path + 'data/start_end_re1.csv', encoding='euc-kr', index_col=0)
+    df_t['DETECTED'] = "NOT FOUND"
+    df_t['STATUS'] = ""
+    for j in work_:
+        h = HF()
+        h.df = pd.read_csv(base_path + 'HF_OUT/check_2020_' + str(j) + '.csv', encoding='euc-kr', index_col=0)
+        hf_name = '가열로' + str(j) + '호기'
+        for i, row in df_t.iterrows():
+            nama = df_t['가열로명'].loc[i]
+            if nama == hf_name:
+                real_start = str(dt.datetime.strptime(df_t['가열시작일시'].loc[i], "%Y-%m-%d %H:%M"))
+                for k, bar in h.df.iterrows():
+                    mulai = h.df['실제 시작시간'].loc[k]
+                    if mulai == real_start:
+                        df_t['DETECTED'].loc[i] = "FOUND"
+                        if len(h.df['소재 list'].loc[k]) == 2:
+                            df_t['STATUS'].loc[i] = "NO MATERIAL"
+                        elif h.df['drop_flag'].loc[k] == 1:
+                            df_t['STATUS'].loc[i] = "GAS OFF/TEMP OFF"
+                        elif h.df['가열중 문열림 횟수'].loc[k] > 0:
+                            df_t['STATUS'].loc[i] = "DOOR OPENED WHILE HEATING"
+                        else:
+                            df_t['STATUS'].loc[i] = "OK"
+                        break
+    df_t.to_csv(base_path + 'HF_OUT/check_2020_start_end_re1.csv', encoding='euc-kr')
+
+
 def plot_heating_data(view):
     for num in work_:
         data = []
@@ -139,7 +189,7 @@ def plot_heating_data(view):
                  time_dict['heat_ended_time_list'], time_dict['real_start_time_list'], time_dict['real_end_time_list'], view)
         # make_database(data, num, h, phase_list_dict)
         make_database2(data, num, h, change_point, phase_list_dict)
-        h.sett(df_mat, base_path + 'HF_OUT/hf_2019_')
+        h.sett(df_mat, base_path + 'HF_OUT/hf_2020_')
         print(str(num) + ' DB_Done')
 
 
@@ -149,27 +199,25 @@ def work_press2():
     p = pd.read_csv(base_path + 'data/' + work_space + 'press_par.csv', encoding='euc-kr', index_col=0)
     for i in work_:
         h = HF()
-        h.df = pd.read_csv(base_path + 'HF_OUT/hf_2019_' + str(i) + '.csv', encoding='euc-kr', index_col=0)
+        h.df = pd.read_csv(base_path + 'HF_OUT/hf_2020_' + str(i) + '.csv', encoding='euc-kr', index_col=0)
         h.set_next_h_2()
         h.change_list()
         h_arr.append(h)
     pm.matching_press_general(h_arr, p)
     for i in h_arr:
-        i.out(base_path + 'HF_OUT/press_2019_')
+        i.out(base_path + 'HF_OUT/press_2020_')
 
 
 # 구간 정리
 def work_set2(curve_type=0):
     hh = HF()
     df_t = pd.read_csv(base_path + 'data/start_end_re1.csv', encoding='euc-kr')
-    # for num in error_arr_2019:
     for num in work_:
         h = HF()
         # data without press matching
-        h.df = pd.read_csv(base_path + 'HF_OUT/hf_2019_' + str(num) + '.csv', encoding='euc-kr', index_col=0)
+        h.df = pd.read_csv(base_path + 'HF_OUT/hf_2020_' + str(num) + '.csv', encoding='euc-kr', index_col=0)
         # data with press matching
-        # h.df = pd.read_csv(base_path + 'HF_OUT/press_2019_' + str(num) + '.csv', encoding='euc-kr', index_col=0)
-        # eliminate_error_loop(h, num[1])
+        # h.df = pd.read_csv(base_path + 'HF_OUT/press_2020_' + str(num) + '.csv', encoding='euc-kr', index_col=0)
         h.match_time(df_t)
         print(str(num), '- end time matching')
         h.fill()
@@ -177,71 +225,110 @@ def work_set2(curve_type=0):
         h.week()
         hh.df = pd.concat([hh.df, h.df])
         hh.df = hh.df.reset_index(drop=True)
-    eliminate_drop(hh)
-    hh.out(base_path + 'HF_OUT/last_2019_ffa')
+    eliminate_drop(hh)  # eliminate error drop_flag loop
+    eliminate_no_material_list(hh)  # eliminate no material list Loop
+    hh.out(base_path + 'HF_OUT/last_2020_ffa')
     print('phase 2')
-    hhh = ['heat', 'hold', 'open', 'reheat']
+    # for heat
+    print('heat')
+    j = 0
+    h2 = HF()
+    row_data = len(hh.df.index)
+    while j < row_data:
+        if hh.df['Type'].loc[j] == 'heat':
+            if curve_type == 0:
+                h2.df = h2.df.append(hh.df.loc[j])
+                j += 1
+            elif curve_type == 10:
+                count = 1
+                k = j + 1
+                while hh.df['Type'].loc[k] == 'heat' and hh.df['cycle'].loc[k] == hh.df['cycle'].loc[j]:
+                    count += 1
+                    k += 1
+                if count % 2 == 0 or count > 5:
+                    for l in range(j, k):
+                        h2.df = h2.df.append(hh.df.loc[l])
+                j = k
+            else:
+                count = 1
+                k = j + 1
+                while hh.df['Type'].loc[k] == 'heat' and hh.df['cycle'].loc[k] == hh.df['cycle'].loc[j]:
+                    count += 1
+                    k += 1
+                if count == curve_type:
+                    for l in range(j, k):
+                        h2.df = h2.df.append(hh.df.loc[l])
+                j = k
+        else:
+            j += 1
+    h2.df = h2.df.reset_index(drop=True)
+    gum_22(h2)  # checking that current cycle's material is same with previous cycle's material
+    h2.df.to_csv(base_path + 'HF_OUT/last_2020_' + str(work_[0]) + '_heat.csv', encoding='euc-kr')
+    # for other beside heat
+    hhh = ['hold', 'open', 'reheat']
     # hhh = ['hold']
+    hf_heat = HF()
+    hf_heat.df = pd.read_csv(base_path + 'HF_OUT/last_2020_' + str(work_[0]) + '_heat.csv',
+                             encoding='euc-kr', index_col=0)
     for i in hhh:
         print(i)
         h2 = HF()
-        if i == 'heat':
-            # for j, row in hh.df.iterrows():
-            #     if hh.df['Type'].loc[j] == i:
-            #         if curve_type == 0:
-            #             h2.df = h2.df.append(row)
-            #         else:
-            #             count = 1
-            #             k = j + 1
-            #             while hh.df['Type'].loc[k] == i and hh.df['cycle'].loc[k] == hh.df['cycle'].loc[j]:
-            #                 count += 1
-            #                 k += 1
-            #             if count == curve_type:
-            #                 for l in range(j, k):
-            #                     h2.df = h2.df.append(hh.df.loc[l])
-            #             j = k
-            j = 0
-            rowdata = len(hh.df.index)
-            while j < rowdata:
-                if hh.df['Type'].loc[j] == i:
-                    if curve_type == 0:
-                        h2.df = h2.df.append(hh.df.loc[j])
-                        j += 1
-                    elif curve_type == 10:
-                        count = 1
-                        k = j + 1
-                        while hh.df['Type'].loc[k] == i and hh.df['cycle'].loc[k] == hh.df['cycle'].loc[j]:
-                            count += 1
-                            k += 1
-                        if count % 2 == 0 or count > 5:
-                            for l in range(j, k):
-                                h2.df = h2.df.append(hh.df.loc[l])
-                        j = k
-                    else:
-                        count = 1
-                        k = j + 1
-                        while hh.df['Type'].loc[k] == i and hh.df['cycle'].loc[k] == hh.df['cycle'].loc[j]:
-                            count += 1
-                            k += 1
-                        if count == curve_type:
-                            for l in range(j, k):
-                                h2.df = h2.df.append(hh.df.loc[l])
-                        j = k
+        for j, row in hh.df.iterrows():
+            if hh.df['Type'].loc[j] == i:
+                current_cycle = hh.df['cycle'].loc[j]
+                current_hf = hh.df['가열로 번호'].loc[j]
+                flag_heat = True
+                filtered_hf_heat = hf_heat.df[hf_heat.df['cycle'] == current_cycle]
+                filtered_hf_heat = filtered_hf_heat[filtered_hf_heat['가열로 번호'] == current_hf]
+                if not filtered_hf_heat.empty:
+                    flag_heat = False
+                if flag_heat:
+                    continue
                 else:
-                    j += 1
-        else:
-            for j, row in hh.df.iterrows():
-                if hh.df['Type'].loc[j] == i:
                     h2.df = h2.df.append(row)
-                else:
-                    pass
+            else:
+                pass
         h2.df = h2.df.reset_index(drop=True)
-        gum_22(h2)
-        h2.df.to_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_' + i + '.csv', encoding='euc-kr')
+        gum_22(h2)  # checking that current cycle's material is same with previous cycle's material
+        h2.df.to_csv(base_path + 'HF_OUT/last_2020_' + str(work_[0]) + '_' + i + '.csv', encoding='euc-kr')
     hh2 = HF()
-    hh2.df = pd.read_csv(base_path + 'HF_OUT/last_2019_ffa' + str(work_[0]) + '.csv', encoding='euc-kr', index_col=0)
-    handle_first_hold(hh2, work_, base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_first_hold.csv')
-    hh2.out(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_drop_first_hold')
+    hh2.df = pd.read_csv(base_path + 'HF_OUT/last_2020_ffa' + str(work_[0]) + '.csv', encoding='euc-kr', index_col=0)
+    handle_first_hold(hh2, work_, base_path + 'HF_OUT/last_2020_' + str(work_[0]) + '_first_hold.csv', hf_heat)
+    hh2.out(base_path + 'HF_OUT/last_2020_' + str(work_[0]) + '_drop_first_hold')
+
+
+def make_heat_or_hold(model):
+    s_list, ss_list = sensitive_()
+    df_mat_heat = pd.read_csv(base_path + 'data/heat_steel_par.csv', encoding='euc-kr')
+    if model == 'energy-increasing' or model == 'time':
+        HT_heat = HF()
+        HT_heat.df = pd.read_csv(base_path + 'HF_OUT/last_2020_' + str(work_[0]) + '_heat_' +
+                                 str(model) + '.csv', encoding='euc-kr', index_col=0)
+        HT_heat.df = HT_heat.df.reset_index(drop=True)
+        HT_heat.change_list2()
+
+        model_heat_kang_ver_heat2(HT_heat, df_mat, df_mat_heat, s_list, ss_list, base_path +
+                                 '/model/model_' + str(work_[0]) + '_' + str(model) + '.csv')
+    elif model == 'energy-holding':
+        HT_heat = HF()
+        HT_heat.df = pd.read_csv(base_path + 'HF_OUT/last_2020_' + str(work_[0]) + '_heat_' +
+                                 str(model) + '.csv', encoding='euc-kr', index_col=0)
+        HT_heat.df = HT_heat.df.reset_index(drop=True)
+        HT_heat.change_list2()
+
+        HT_hold = HF()
+        # HT_hold.df = pd.read_csv(base_path + 'HF_OUT/last_2020_' + str(work_[0]) + '_first_hold.csv',
+        #                          encoding='euc-kr', index_col=0)
+        HT_hold.df = pd.read_csv(base_path + 'HF_OUT/last_2020_' + str(work_[0]) + '_hold.csv',
+                                 encoding='euc-kr', index_col=0)
+        HT_hold.df = HT_hold.df.reset_index(drop=True)
+        HT_hold.change_list2()
+
+        model_hold_kang_ver_hold(HT_heat, HT_hold, df_mat, df_mat_heat, s_list, ss_list, base_path +
+                                 '/model/model_' + str(work_[0]) + '_' + str(model) + '.csv')
+    else:
+        print('wrong model')
+        exit(0)
 
 
 def HF_learning(model):
@@ -268,6 +355,7 @@ def HF_learning(model):
     seed_end = 20
 
     for i2 in path_1:
+        df_complete = pd.DataFrame()
         # for i in [p_bum[4]]:
         for i in p_bum:
             df_origin = pd.read_csv(base_path + 'analysis/for_learning_' + str(model) + '/' + str(i2[0]) +
@@ -282,6 +370,8 @@ def HF_learning(model):
                         out2 = []
                         out3 = []
 
+                        # j[1] = ['시간(총)']
+                        # j[3] = '시간(총)'
                         if model == 'energy-increasing':
                             if i == [1]:
                                 j[1] = ['종료온도', '시간(총)']
@@ -315,7 +405,7 @@ def HF_learning(model):
                         test_label = test_label.reset_index(drop=True)
 
                         layer = []
-                        layer.append([5, 5])
+                        # layer.append([5, 5])
                         if model == 'energy-increasing':
                             if i == [2]:
                                 layer.append([2, 2])
@@ -329,6 +419,8 @@ def HF_learning(model):
                                 layer.append([9, 9])
                             elif i == [19]:
                                 layer.append([10, 10])
+                            elif i == [20]:
+                                layer.append([5, 5])
                             else:
                                 layer.append([7, 7])
                         if model == 'energy-holding':
@@ -338,8 +430,8 @@ def HF_learning(model):
                                 layer.append([4, 4])
                             elif i == [17]:
                                 layer.append([3, 5])
-                            elif i == [2]:
-                                layer.append([5, 3])
+                            elif i == [2] or i == [13] or i == [17]:
+                                layer.append([5, 5])
                             else:
                                 layer.append([3, 3])
 
@@ -353,11 +445,13 @@ def HF_learning(model):
                             out.append(s1)
                             df_new.loc[seed1 - seed_start, j[3] + '_MLP_' + str(hidden) + '_' + str(unit) + '_' + j[0]] \
                                 = out[len(out) - 1]
+                            df_complete.loc[seed1 - seed_start, str(i) + '_' + j[3] + '_MLP_' + str(hidden) + '_' + str(unit) + '_' + j[0]] \
+                                = out[len(out) - 1]
 
                         # KNN
-                        knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature, train_label, test_feature, test_label)
-                        out2.append(mean_absolute_percentage_error(test_label, knn_test_pred))
-                        df_new.loc[seed1 - seed_start, j[3] + '_KNN_' + j[0]] = out2[len(out2) - 1]
+                        # knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature, train_label, test_feature, test_label)
+                        # out2.append(mean_absolute_percentage_error(test_label, knn_test_pred))
+                        # df_new.loc[seed1 - seed_start, j[3] + '_KNN_' + j[0]] = out2[len(out2) - 1]
 
                         # print('path : ', i2, ' p_bum : ', i)
                         # print('seed : ', seed1, ' feature_list : ', j2)
@@ -376,11 +470,22 @@ def HF_learning(model):
                     if not pd.isna(df_new.loc[i01, i0]):
                         arr_avg.append(float(df_new.loc[i01, i0]))
                 print(arr_avg)
-
                 df_new.loc[seed_end - seed_start, i0] = np.average(arr_avg)
             df_new = df_new.rename(index={seed_end - seed_start: 'average'})
             df_new.to_csv(base_path + 'model_result/model_result_' + str(epoch) + '_' + str(model) + '/' +
                           str(i2[0]) + '/result_' + str(i) + '1.csv', encoding='euc-kr')
+
+        for i0 in df_complete.columns:
+            # print(i0)
+            arr_avg = []
+            for i01, ro2 in df_complete.iterrows():
+                if not pd.isna(df_complete.loc[i01, i0]):
+                    arr_avg.append(float(df_complete.loc[i01, i0]))
+            # print(arr_avg)
+            df_complete.loc[seed_end - seed_start, i0] = np.average(arr_avg)
+        df_complete = df_complete.rename(index={seed_end - seed_start: 'average'})
+        df_complete.to_csv(base_path + 'model_result/model_result_' + str(epoch) + '_' + str(model) + '/' +
+                      str(i2[0]) + '/result_complete1.csv', encoding='euc-kr')
 
 
 def HF_learning_result_check(model):
@@ -479,6 +584,7 @@ def wrapper_feature_selection(model):
     seed_end = 20
 
     for i2 in path_1:
+        df_complete = pd.DataFrame()
         for i in p_bum:
             df_origin = pd.read_csv(base_path + 'analysis/for_learning_' + str(model) + '/' + str(i2[0]) +
                                     '/' + str(i) + '.csv', encoding='euc-kr', index_col=0)
@@ -521,6 +627,10 @@ def wrapper_feature_selection(model):
                                 = str(list(feature_result_mlp_sfs))
                             df_new.loc[seed1 - seed_start, 'f_' + j[3] + '_MLP_' + str(hidden) + '_' + str(unit) + '_' + j[0]] \
                                 = s1
+                            df_complete.loc[seed1 - seed_start, str(i) + '_forward'] \
+                                = str(list(feature_result_mlp_sfs))
+                            df_complete.loc[seed1 - seed_start, str(i) + '_f_' + j[3] + '_MLP_' + str(hidden) + '_' + str(unit) + '_' + j[0]] \
+                                = s1
 
                             s1, mlp_test_pred, mlp_train_pred, data_model = \
                                 MLP(train_feature_sbs, train_label, test_feature_sbs, test_label,
@@ -528,6 +638,10 @@ def wrapper_feature_selection(model):
                             df_new.loc[seed1 - seed_start, 'backward'] \
                                 = str(list(feature_result_mlp_sbs))
                             df_new.loc[seed1 - seed_start, 'b_' + j[3] + '_MLP_' + str(hidden) + '_' + str(unit) + '_' + j[0]] \
+                                = s1
+                            df_complete.loc[seed1 - seed_start, str(i) + '_backward'] \
+                                = str(list(feature_result_mlp_sbs))
+                            df_complete.loc[seed1 - seed_start, str(i) + '_b_' + j[3] + '_MLP_' + str(hidden) + '_' + str(unit) + '_' + j[0]] \
                                 = s1
 
                         # # Sequential Forward Selection(sfs) - KNN
@@ -554,26 +668,42 @@ def wrapper_feature_selection(model):
                     if not pd.isna(df_new.loc[i01, i0]) and not isinstance(df_new.loc[i01, i0], str):
                         arr_avg.append(float(df_new.loc[i01, i0]))
                 print(arr_avg)
-
                 df_new.loc[seed_end - seed_start, i0] = np.average(arr_avg)
             df_new = df_new.rename(index={seed_end - seed_start: 'average'})
             df_new.to_csv(base_path + 'model_result/model_result_' + str(epoch) + '_' + str(model) + '/' +
                           str(i2[0]) + '/result_' + str(i) + '1.csv', encoding='euc-kr')
+        for i0 in df_complete.columns:
+            # print(i0)
+            arr_avg = []
+            for i01, ro2 in df_complete.iterrows():
+                if not pd.isna(df_complete.loc[i01, i0]) and not isinstance(df_complete.loc[i01, i0], str):
+                    arr_avg.append(float(df_complete.loc[i01, i0]))
+            # print(arr_avg)
+            df_complete.loc[seed_end - seed_start, i0] = np.average(arr_avg)
+        df_complete = df_complete.rename(index={seed_end - seed_start: 'average'})
+        df_complete.to_csv(base_path + 'model_result/model_result_' + str(epoch) + '_' + str(model) + '/' +
+                      str(i2[0]) + '/result_complete1.csv', encoding='euc-kr')
 
 
 if __name__ == '__main__':
     # get_data()
-    # summarize_heating_data()
+    # summarize_heating_data
 
-    # plot_heating_data(view=False)
+    # plot_heating_data(view=True)
+    # check_data()
+    # check_real_start_time()
+
     # work_press2()     # optional
-    # work_set2(curve_type=1)   # 0 = all, 1 = heating curve type 1, 3 = heating curve type 2, 5 = heating curve type 3, 10 = strange heating curve
 
-    model = 'energy-increasing'   # energy-increasing, energy-holding, time
+    # 0 = all, 1 = heating curve type 1, 3 = heating curve type 2, 5 = heating curve type 3, 10 = strange heating curve
+    # work_set2(curve_type=0)
+
+    model = 'energy-holding'   # energy-increasing, energy-holding, time
 
     # make_heat_or_hold(model=model)
-    # furnace_clustering2(model=model)
+    furnace_clustering2(model=model)
     HF_learning(model=model)
+
     # wrapper_feature_selection(model=model)
 
     # HF_learning_result_check(model=model)

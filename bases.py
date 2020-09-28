@@ -7,16 +7,13 @@ from matplotlib.widgets import Button
 import datetime as dt
 import numpy as np
 import pandas as pd
-import sys
-import math
 from openpyxl import load_workbook
-import os
 
 error_dict = {'case': [], '가열로 호기': [], '시간': [], '온도': [], '가스': []}
 case_id = 0
 
 oneWeekToMin = 10080     # 10080
-threeDaysToMin = 4320   # 4320
+threeDaysToMin = 5760   # 4320
 
 
 class HF:
@@ -175,6 +172,7 @@ class HF:
 
     def fill(self):
         count_c = 0
+        d_flag = 0
         # print(len(self.df.index))
         self.df['소재 list'] = self.df['소재 list'].fillna(np.NaN)
         for i, row in self.df.iterrows():
@@ -191,12 +189,17 @@ class HF:
                     self.df.loc[i, '소재 list'] = self.df.loc[i - 1, '소재 list']
                 elif self.df.loc[i, 'Type'] == 'reheat' and i > 0:
                     self.df.loc[i, '소재 list'] = self.df.loc[i - 1, '소재 list']
+            if i == 0:
+                d_flag = self.df['drop_flag'].loc[i]
             if i > 0:
                 if (self.df.loc[i, 'Type'] == 'heat' and self.df.loc[i - 1, 'Type'] != 'heat') or \
                         (self.df.loc[i, 'Type'] == 'heat' and self.df.loc[i - 1, 'Type'] == 'heat' and
                          self.df.loc[i, '실제 시작시간'] != self.df.loc[i - 1, '실제 시작시간']):
-                    count_c += 1
+                    # count_c += 1
+                    count_c = self.df.loc[i, 'cycle']
+                    d_flag = self.df['drop_flag'].loc[i]
             self.df['cycle'].loc[i] = count_c
+            self.df['drop_flag'].loc[i] = d_flag
             # if self.df['Type'].loc[i] == 'reheat' and self.df['in'].loc[i - 1] != '[]':
             #     self.df['in'].loc[i] = self.df['in'].loc[i - 1]
             if self.df['Type'].loc[i] != 'heat' and i is not 0:
@@ -424,7 +427,6 @@ def plotting(data, change_point10, start_arr, end_arr, num, re, start_real=None,
     plt.plot(x, z, color='black')
 
     # change point / 수직선들
-
     if start_real is not None:
         for i in start_real:
             plt.axvline(x=i, color='orange')
@@ -589,7 +591,7 @@ def plot_data(graph, count, end_count, data, change_point10, start_arr, end_arr,
     # 온도
     graph.plot(x, y, color='dimgrey')
     # 가스
-    # graph.plot(x, z, color='black')
+    graph.plot(x, z, color='black')
 
     formatter = DateFormatter("%b-%d")
     formatter2 = DateFormatter("%H")

@@ -52,7 +52,6 @@ def work_set():
     for num in work_:
         h = HF()
         h.df = pd.read_csv(base_path + 'HF_OUT/press_2019_1a_' + str(num) + '.csv', encoding='euc-kr', index_col=0)
-        # eliminate_error_loop(h, num[1])
         h.match_time(df_t)
         print('end time matching')
         h.fill()
@@ -91,40 +90,6 @@ def make_heat():
     HT_heat.change_list2()
     model_heat_kang_ver_heat(HT_heat, df_mat, df_mat_heat, s_list, ss_list,
                              base_path + '/model/model_' + str(work_[0]) + '.csv')
-
-
-def make_heat_or_hold(model):
-    s_list, ss_list = sensitive_()
-    df_mat_heat = pd.read_csv(base_path + 'data/heat_steel_par.csv', encoding='euc-kr')
-    if model == 'energy-increasing' or model == 'time':
-        HT_heat = HF()
-        HT_heat.df = pd.read_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_heat_' +
-                                 str(model) + '.csv', encoding='euc-kr', index_col=0)
-        HT_heat.df = HT_heat.df.reset_index(drop=True)
-        HT_heat.change_list2()
-
-        model_heat_kang_ver_heat2(HT_heat, df_mat, df_mat_heat, s_list, ss_list, base_path +
-                                 '/model/model_' + str(work_[0]) + '_' + str(model) + '.csv')
-    elif model == 'energy-holding':
-        HT_heat = HF()
-        HT_heat.df = pd.read_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_heat_' +
-                                 str(model) + '.csv', encoding='euc-kr', index_col=0)
-        HT_heat.df = HT_heat.df.reset_index(drop=True)
-        HT_heat.change_list2()
-
-        HT_hold = HF()
-        # HT_hold.df = pd.read_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_first_hold.csv',
-        #                          encoding='euc-kr', index_col=0)
-        HT_hold.df = pd.read_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_hold.csv',
-                                 encoding='euc-kr', index_col=0)
-        HT_hold.df = HT_hold.df.reset_index(drop=True)
-        HT_hold.change_list2()
-
-        model_hold_kang_ver_hold(HT_heat, HT_hold, df_mat, df_mat_heat, s_list, ss_list, base_path +
-                                 '/model/model_' + str(work_[0]) + '_' + str(model) + '.csv')
-    else:
-        print('wrong model')
-        exit(0)
 
 
 # 호기 분리
@@ -276,7 +241,9 @@ def furnace_clustering2(model):
                     time_flag = 0
                     flag_m = 0
                     if int(df.loc[i2, '가열로번호']) in i:
-                        if int(df.loc[i2, '열괴장입소재개수']) > 0 or int(df.loc[i2, '문열림횟수']) > 0:
+                        # door opening while heating data is being used
+                        # if int(df.loc[i2, '열괴장입소재개수']) > 0 or int(df.loc[i2, '문열림횟수']) > 0:
+                        if int(df.loc[i2, '열괴장입소재개수']) > 0:
                             heat_flag = 1
                         if int(df.loc[i2, '민감소재장입개수']) > 0:
                             sense_flag = 1

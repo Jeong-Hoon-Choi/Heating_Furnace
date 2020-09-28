@@ -10,14 +10,13 @@ flag_temp = 0
 def data_manipulates(data, num, time):
     reinforce(data)
     start_real, end_real = st_end_all(num, time)
-    print(len(start_real), start_real)
-    print(len(end_real), end_real)
+    # print(len(start_real), start_real)
+    # print(len(end_real), end_real)
     return start_real, end_real
 
 
 # change point detection algorithm
 def find_all(data, change_point, num, start_real, end_real):
-
     global thr_end
     global flag_start
     global flag_end
@@ -48,7 +47,7 @@ def find_all(data, change_point, num, start_real, end_real):
     #
     status_dict = {'furnace': 'initial', 'cycle': 'initial'}
 
-    # 시작상태 세팅
+    # 시작상태 세팅 - Setting Start Status
     initialize_status(data[0]['TIME'], time_dict['real_start_time_list'][0], heating_parameter_dict, status_dict)
     if num == 5 or num == 6:
         # thr_end = 1220
@@ -62,14 +61,14 @@ def find_all(data, change_point, num, start_real, end_real):
         current = len(WINDOW_DATA) // 2
         # if i == 10: print(len(WINDOW_DATA), current)
         change_point.append(None)
-        # 가동종료 - 가열완료 사이클
+        # 가동종료 - 가열완료 사이클 - End of Operation - Heated Complete Cycle
         if status_dict['furnace'] == 'wait_for_heating':
             before_work(WINDOW_DATA, i, current, num, change_point, heating_parameter_dict, status_dict, find_change_point_dict, time_dict, phase_list_dict, thr_end)
             if status_dict['furnace'] == 'after_heating_to_end':
                 differential_arr = get_diff(WINDOW_DATA, current)
                 door_close_index = None
 
-        # 가열완료 - 가동종료 사이클
+        # 가열완료 - 가동종료 사이클 - Heating complete - shutdown cycle
         elif status_dict['furnace'] == 'after_heating_to_end':
             differential_arr = get_diff(WINDOW_DATA, current)
             # print(WINDOW_DATA[current]['TIME'])
@@ -99,9 +98,9 @@ def find_all(data, change_point, num, start_real, end_real):
 
 def before_work(WINDOW_DATA, i, current, num, change_point, heating_parameter_dict, status_dict,
                 find_change_point_dict, time_dict, phase_list_dict, thr_end):
-    # 가열로 가열 시작 전
+    # 가열로 가열 시작 전 - before heating with heating
     if heating_parameter_dict['is_heat_start'] is False:
-        # 가열로 시간 조건
+        # 가열로 시간 조건 - heating furnace time condition
         if is_work_start(WINDOW_DATA, current, time_dict):
             heating_parameter_dict['time_condition'] = True
             heating_parameter_dict['real_heat_start_index'] = i
@@ -109,12 +108,12 @@ def before_work(WINDOW_DATA, i, current, num, change_point, heating_parameter_di
             heating_parameter_dict['last_work_end_time'] = WINDOW_DATA[current]['TIME']
             heating_parameter_dict['time_condition'] = False
             heating_parameter_dict['real_heat_start_index'] = None
-        # 가열로 가스 조건
+        # 가열로 가스 조건 - heating furnace gas condition
         check_gas_condition(WINDOW_DATA, current, i, heating_parameter_dict, status_dict, find_change_point_dict)
-        # 두 조건 체크
+        # 두 조건 체크 - check two conditions
         if heating_parameter_dict['time_condition'] and heating_parameter_dict['gas_condition']:
             heating_parameter_dict['is_heat_start'] = True
-    # 가열로 가열 시작 중
+    # 가열로 가열 시작 중 - starting heating with heating
     if heating_parameter_dict['is_heat_start'] is True:
         differential_arr = get_diff(WINDOW_DATA, current)
         if is_this_point_can_be_a_change_point(differential_arr[0], differential_arr[1]):
@@ -206,13 +205,12 @@ def point_detection_while_heating(WINDOW_DATA, current, change_point, pp_mean, f
                 data = []
                 flag_temp = WINDOW_DATA[current]['TEMPERATURE']
 
-    # 대분류
+    # 대분류 - large category
     categorize(pp_mean, ff_mean, WINDOW_DATA, current, thr, i, time_dict, status_dict, find_change_point_dict)
 
-    # 대분류를 바탕으로 change point detect
-
+    # 대분류를 바탕으로 change point detect - change point detect base on great classification
     if status_dict['cycle'] == 'initial':
-        # 초기화
+        # 초기화 - initialization
         if find_change_point_dict['before_state'] is None:
             find_change_point_dict['before_state'] = find_change_point_dict['after_state']
             status_dict['cycle'] = 'wait'
@@ -224,7 +222,7 @@ def point_detection_while_heating(WINDOW_DATA, current, change_point, pp_mean, f
         module_door_close_while_heat(WINDOW_DATA, current, change_point, i, thr, time_dict, status_dict, heating_parameter_dict, find_change_point_dict)
 
     elif status_dict['cycle'] == 'wait':
-        # 대기상태
+        # 대기상태 - standby status
         if is_ready(find_change_point_dict):
             find_change_point_dict['before_state'] = find_change_point_dict['after_state']
 
@@ -237,13 +235,13 @@ def point_detection(WINDOW_DATA, current, change_point, pp_mean, ff_mean, num, i
     else:
         thr = 70
 
-    # 대분류
+    # 대분류 - large category
     categorize(pp_mean, ff_mean, WINDOW_DATA, current, thr, i, time_dict, status_dict, find_change_point_dict)
 
-    # 대분류를 바탕으로 change point detect
+    # 대분류를 바탕으로 change point detect - change point detect base on great classification
 
     if status_dict['cycle'] == 'initial':
-        # 초기화
+        # 초기화 - initialization
         if find_change_point_dict['before_state'] is None:
             find_change_point_dict['before_state'] = find_change_point_dict['after_state']
             status_dict['cycle'] = 'wait'
@@ -255,7 +253,7 @@ def point_detection(WINDOW_DATA, current, change_point, pp_mean, ff_mean, num, i
         module_door_close(WINDOW_DATA, current, change_point, i, thr, time_dict, status_dict, heating_parameter_dict, find_change_point_dict, phase_list_dict)
 
     elif status_dict['cycle'] == 'wait':
-        # 대기상태
+        # 대기상태 - standby status
         if is_ready(find_change_point_dict):
             find_change_point_dict['before_state'] = find_change_point_dict['after_state']
 
@@ -329,11 +327,11 @@ def categorize(pp_mean, ff_mean, WINDOW_DATA, current, thr, i, time_dict, status
 
 
 def module_door_open_while_heat(WINDOW_DATA, current, i, status_dict, find_change_point_dict):
-    # 문열림 갱신
+    # 문열림 갱신 - update door opening
     if find_change_point_dict['before_state'] == 'plus-to-minus' and find_change_point_dict['after_state'] == 'zero-to-minus':
         find_change_point_dict['before_state'] = find_change_point_dict['after_state']
 
-    # 문닫힘
+    # 문닫힘 - door closed
     elif check_door_close(WINDOW_DATA, current, find_change_point_dict):
         if find_change_point_dict['door_open_save'] is None:
             find_change_point_dict['door_open_save'] = {'index': find_change_point_dict['door_open_estimate']['index'], 'now': find_change_point_dict['door_open_estimate']['now']}
@@ -347,13 +345,13 @@ def module_door_open_while_heat(WINDOW_DATA, current, i, status_dict, find_chang
                                                 find_change_point_dict['door_close_estimate']['index']]
 
 
-# 문열림 - 문닫힘 구간
+# 문열림 - 문닫힘 구간 - Door Open - Door Close Intersection
 def module_door_open(WINDOW_DATA, current, i, status_dict, find_change_point_dict):
-    # 문열림 갱신
+    # 문열림 갱신 - update door opening
     if find_change_point_dict['before_state'] == 'plus-to-minus' and find_change_point_dict['after_state'] == 'zero-to-minus':
         find_change_point_dict['before_state'] = find_change_point_dict['after_state']
 
-    # 문닫힘
+    # 문닫힘 - door closed
     elif check_door_close(WINDOW_DATA, current, find_change_point_dict):
         if find_change_point_dict['door_open_save'] is None:
             find_change_point_dict['door_open_save'] = {'index': find_change_point_dict['door_open_estimate']['index'], 'now': find_change_point_dict['door_open_estimate']['now']}
@@ -365,11 +363,11 @@ def module_door_open(WINDOW_DATA, current, i, status_dict, find_change_point_dic
 
 
 def module_door_close_while_heat(WINDOW_DATA, current, change_point, i, thr, time_dict, status_dict, heating_parameter_dict, find_change_point_dict):
-    # 문닫힘 갱신
+    # 문닫힘 갱신 - update door closing
     if is_still_lower_point(find_change_point_dict):
         find_change_point_dict['before_state'] = find_change_point_dict['after_state']
 
-    # 재가열 완료
+    # 재가열 완료 - reheat complete
     elif check_reheat_end(find_change_point_dict, WINDOW_DATA, current, i, thr, time_dict):
         # change_point[find_change_point_dict['door_close_estimate']['index']] = find_change_point_dict['door_close_estimate']['now']['TEMPERATURE']
         # change_point[find_change_point_dict['door_open_save']['index']] = find_change_point_dict['door_open_save']['now']['TEMPERATURE']
@@ -392,13 +390,13 @@ def module_door_close_while_heat(WINDOW_DATA, current, change_point, i, thr, tim
         heating_parameter_dict['num_of_door_open'] += 1
 
 
-# 문닫힘 - 재가열완료 구간
+# 문닫힘 - 재가열완료 구간 - Door Closed - Reheat Completed Section
 def module_door_close(WINDOW_DATA, current, change_point, i, thr, time_dict, status_dict, heating_parameter_dict, find_change_point_dict, phase_list_dict):
-    # 문닫힘 갱신
+    # 문닫힘 갱신 - update door closing
     if is_still_lower_point(find_change_point_dict):
         find_change_point_dict['before_state'] = find_change_point_dict['after_state']
 
-    # 재가열 완료
+    # 재가열 완료 - reheat complete
     elif check_reheat_end(find_change_point_dict, WINDOW_DATA, current, i, thr, time_dict):
         change_point[find_change_point_dict['door_close_estimate']['index']] = find_change_point_dict['door_close_estimate']['now']['TEMPERATURE']
         change_point[find_change_point_dict['door_open_save']['index']] = find_change_point_dict['door_open_save']['now']['TEMPERATURE']
@@ -463,7 +461,7 @@ def check_gas_condition(WINDOW_DATA, current, i, heating_phase_dict, status_dict
             pass
 
 
-# 기울기
+# 기울기 - slope
 def calculate_diff(data, t, num1, num2, sign):
     temp = []
     for i in range(0, num2+1):
@@ -478,7 +476,7 @@ def calculate_diff(data, t, num1, num2, sign):
         return np.mean(temp)
 
 
-# 기울기 계산
+# 기울기 계산 - slope calculation
 def get_diff(data, t):
     arr = [0, 0, 0, 0]
     arr[0] = calculate_diff(data, t, 2, 0, 'past')

@@ -108,8 +108,8 @@ def make_database2(data, num, h, change_point, phase_list_dict):
             tent_gas = []
             for j in range(heat[i][0] + 1, heat[i][1] + 1):
                 tent_gas.append(data[j]['GAS'])
-            if data[heat[i][0]]['GAS_OFF'] == 1 or data[heat[i][1]]['GAS_OFF'] == 1 or \
-                    data[heat[i][0]]['TEMP_OFF'] == 1 or data[heat[i][1]]['TEMP_OFF'] == 1 or heat[i][8] == 0 or \
+            if data[heat[i][0] + 1]['GAS_OFF'] == 1 or data[heat[i][1]]['GAS_OFF'] == 1 or \
+                    data[heat[i][0] + 1]['TEMP_OFF'] == 1 or data[heat[i][1]]['TEMP_OFF'] == 1 or heat[i][8] == 0 or \
                     heat[i][8] is None:
                 drop_flag = 1
             temp_diff = abs(data[heat[i][1]]['TEMPERATURE'] - data[heat[i][0]]['TEMPERATURE'])
@@ -131,8 +131,8 @@ def make_database2(data, num, h, change_point, phase_list_dict):
             continue
 
         type = 0    # 0 = start, 1 = holding period, 2 = increasing period
-        tolerance = 30
-        tolerance_time = 40
+        tolerance_time = 30
+        tolerance_temp = 50
         count_flat = 0
         count_increased = 0
         last_heating = 0
@@ -141,31 +141,31 @@ def make_database2(data, num, h, change_point, phase_list_dict):
                 if start is None:
                     start = j
                 else:
-                    if j < start + tolerance_time and data[j]['TEMPERATURE'] - data[start]['TEMPERATURE'] < tolerance:
+                    if j < start + tolerance_time and data[j]['TEMPERATURE'] - data[start]['TEMPERATURE'] < tolerance_temp:
                         tent_gas.append(data[j]['GAS'])
                         continue
 
                     if type == 0:
-                        if data[j]['TEMPERATURE'] - data[start]['TEMPERATURE'] < tolerance:
+                        if data[j]['TEMPERATURE'] - data[start]['TEMPERATURE'] < tolerance_temp:
                             type = 1
                         else:
                             type = 2
 
-                    if data[j]['TEMPERATURE'] - data[start]['TEMPERATURE'] < tolerance and type == 1:
+                    if data[j]['TEMPERATURE'] - data[start]['TEMPERATURE'] < tolerance_temp and type == 1:
                         lists = change_point[j + 1:heat[i][1] + 1]
                         if lists:
                             after = next(item for item in lists if item is not None)
-                            if after - data[j]['TEMPERATURE'] < tolerance:
+                            if after - data[j]['TEMPERATURE'] < tolerance_temp:
                                 tent_gas.append(data[j]['GAS'])
                                 continue
 
                         end = j
                         tent_gas.append(data[j]['GAS'])
 
-                        if data[start]['GAS_OFF'] == 1 or data[end]['GAS_OFF'] == 1 or data[start]['TEMP_OFF'] == 1 or \
+                        if data[start + 1]['GAS_OFF'] == 1 or data[end]['GAS_OFF'] == 1 or data[start + 1]['TEMP_OFF'] == 1 or \
                                 data[end]['TEMP_OFF'] == 1 or heat[i][8] == 0 or heat[i][8] is None:
                             drop_flag = 1
-                        if data[end]['TEMPERATURE'] - data[start]['TEMPERATURE'] < tolerance:
+                        if data[end]['TEMPERATURE'] - data[start]['TEMPERATURE'] < tolerance_temp:
                             temp_diff = abs(data[end]['TEMPERATURE'] - data[start]['TEMPERATURE'])
                             time_diff = (data[end]['TIME'] - data[start]['TIME']).total_seconds() / 3600
                             gradient = temp_diff / time_diff
@@ -188,21 +188,21 @@ def make_database2(data, num, h, change_point, phase_list_dict):
                         start = j
                         end = None
                         tent_gas = []
-                    elif data[j]['TEMPERATURE'] - data[start]['TEMPERATURE'] >= tolerance and type == 2:
+                    elif data[j]['TEMPERATURE'] - data[start]['TEMPERATURE'] >= tolerance_temp and type == 2:
                         lists = change_point[j + 1:heat[i][1] + 1]
                         if lists:
                             after = next(item for item in lists if item is not None)
-                            if after - data[j]['TEMPERATURE'] >= tolerance:
+                            if after - data[j]['TEMPERATURE'] >= tolerance_temp:
                                 tent_gas.append(data[j]['GAS'])
                                 continue
 
                         end = j
                         tent_gas.append(data[j]['GAS'])
 
-                        if data[start]['GAS_OFF'] == 1 or data[end]['GAS_OFF'] == 1 or data[start]['TEMP_OFF'] == 1 or \
+                        if data[start + 1]['GAS_OFF'] == 1 or data[end]['GAS_OFF'] == 1 or data[start + 1]['TEMP_OFF'] == 1 or \
                                 data[end]['TEMP_OFF'] == 1 or heat[i][8] == 0 or heat[i][8] is None:
                             drop_flag = 1
-                        if data[end]['TEMPERATURE'] - data[start]['TEMPERATURE'] >= tolerance:
+                        if data[end]['TEMPERATURE'] - data[start]['TEMPERATURE'] >= tolerance_temp:
                             temp_diff = abs(data[end]['TEMPERATURE'] - data[start]['TEMPERATURE'])
                             time_diff = (data[end]['TIME'] - data[start]['TIME']).total_seconds() / 3600
                             gradient = temp_diff / time_diff
@@ -355,6 +355,7 @@ def gum_2(h1):
     h1.df = h1.df.reset_index(drop=True)
 
 
+# checking that current cycle's material is same with previous cycle's material
 def gum_22(h1):
     h1.set_next_h_2()
     h1.change_list()
@@ -387,7 +388,7 @@ def gum_22(h1):
 
 
 # extract/leaving first holding
-def handle_first_hold(h1, work, s):
+def handle_first_hold(h1, work, s, hf_heat):
     del_arr = []
     df_temp = pd.DataFrame(columns=h1.df.columns)
     for j in work:
@@ -398,7 +399,7 @@ def handle_first_hold(h1, work, s):
             if int(h1.df['가열로 번호'].loc[i]) == j and int(h1.df['cycle'].loc[i]) != cycle_num and h1.df['Type'].loc[i] == 'heat':
                 cycle_num = int(h1.df['cycle'].loc[i])
             if int(h1.df['가열로 번호'].loc[i]) == j and int(h1.df['cycle'].loc[i]) == cycle_num:
-                if h1.df['Type'].loc[i] == 'heat' and h1.df['Type'].loc[i+1] == 'heat':
+                if h1.df['Type'].loc[i] == 'heat' and h1.df['Type'].loc[i + 1] == 'heat':
                     cycle_num += 1
                 if h1.df['Type'].loc[i] == 'hold':
                     # print('work')
@@ -419,15 +420,22 @@ def handle_first_hold(h1, work, s):
                         pass
     for i in del_arr:
         h1.df = h1.df.drop([i])
-        # print(i, h1.df['Type'].loc[i])
     df_temp.to_csv(s, encoding='euc-kr')
     h1.df = h1.df.reset_index(drop=True)
 
 
-# eliminate error loop
+# eliminate error drop_flag loop
 def eliminate_drop(h):
     for i, row in h.df.iterrows():
         if h.df.loc[i, 'drop_flag'] == 1:
+            h.df = h.df.drop([i])
+    h.df = h.df.reset_index(drop=True)
+
+
+# eliminate no material list Loop
+def eliminate_no_material_list(h):
+    for i, row in h.df.iterrows():
+        if len(h.df.loc[i, '소재 list']) <= 4:
             h.df = h.df.drop([i])
     h.df = h.df.reset_index(drop=True)
 
@@ -610,9 +618,9 @@ def model_reheat(HT, df_mat, s):
 
 # make data for holding model
 def model_hold_kang_ver_hold(HT, HT2, df_mat, df_mat_heat, s_list, ss_list, s):
-    temp_dict = {'가열로번호': [], '에너지': [], '시작시간': [], '종료시간': [], '시간(총)': [],
+    temp_dict = {'가열로번호': [], 'cycle': [], '에너지': [], '시작시간': [], '종료시간': [], '시간(총)': [],
                  '시작온도': [], '종료온도': [], '장입소재개수': [], '장입중량총합': [], '장입최대중량': [],
-                 '강종': [], '강종_ALLOY': [], '강종_CARBON': [], '강종_SUS': [], 'cycle': [],
+                 '강종': [], '강종_ALLOY': [], '강종_CARBON': [], '강종_SUS': [],
                  '민감소재장입개수': [], '민감소재중량총합': [], '민감소재최대중량': [],
                  '비민감소재장입개수': [], '비민감소재중량총합': [], '비민감소재최대중량': [],
                  '민감비고': [], '에러발생': []}
@@ -708,7 +716,8 @@ def model_hold_kang_ver_hold(HT, HT2, df_mat, df_mat_heat, s_list, ss_list, s):
                 temp_dict['비민감소재최대중량'].append(np.max(list_SNM))
             if HT.df['가스사용량'].loc[i] == 0:
                 flag_E = 1
-            if flag_E == 1 or steel_type == 0:
+            # if flag_E == 1 or steel_type == 0:
+            if flag_E == 1:
                 temp_dict['에러발생'].append(1)
             else:
                 temp_dict['에러발생'].append(0)
@@ -737,12 +746,14 @@ def model_hold_kang_ver_hold(HT, HT2, df_mat, df_mat_heat, s_list, ss_list, s):
         end = dt.datetime.strptime(HT2.df['종료시간'].loc[i], "%Y-%m-%d %H:%M:%S")
         start = dt.datetime.strptime(HT2.df['시작시간'].loc[i], "%Y-%m-%d %H:%M:%S")
         dis = (end - start).total_seconds() / 60
+        # tolerance_time = 30
         tolerance_time = 30
         start_temp = HT2.df['시작온도'].loc[i]
         end_temp = HT2.df['종료온도'].loc[i]
         tolerance_temp = 50
         energy = HT2.df['가스사용량'].loc[i]
-        tolerance_energy = 100
+        # tolerance_energy = 100
+        tolerance_energy = 40
         if dis <= tolerance_time or abs(end_temp - start_temp) >= tolerance_temp or energy <= tolerance_energy:
             continue
 
@@ -1132,9 +1143,10 @@ def model_heat_kang_ver_heat2(HT, df_mat, df_mat_heat, s_list, ss_list, s):
     HT.df = HT.df.reset_index(drop=True)
     print(HT.df)
     # list_mn = [0]*len(sn_list)
-    temp_dict = {'가열로번호': [], '에너지': [], '가열시작시간': [], '가열종료시간': [], '시간(총)': [],
+    temp_dict = {'가열로번호': [], 'cycle': [], '에너지': [], '가열시작시간': [], '가열종료시간': [], '시간(총)': [],
                  '시작온도': [], '종료온도': [], '장입소재개수': [], '장입중량총합': [], '장입최대중량': [],
-                 '강종': [], '강종_ALLOY': [], '강종_CARBON': [], '강종_SUS': [], '쉰시간': [], 'cycle': [],
+                 'gradient': [], 'temp_diff': [], 'time_diff': [], '강종': [],
+                 '강종_ALLOY': [], '강종_CARBON': [], '강종_SUS': [], '쉰시간': [],
                  'A_num': [], 'A_sum': [], 'A_max': [],
                  'C_num': [], 'C_sum': [], 'C_max': [],
                  'S_num': [], 'S_sum': [], 'S_max': [],
@@ -1175,6 +1187,9 @@ def model_heat_kang_ver_heat2(HT, df_mat, df_mat_heat, s_list, ss_list, s):
             temp_dict['겹침여부'].append(HT.df['겹침여부'].loc[i])
             temp_dict['시작온도'].append(t_start)
             temp_dict['종료온도'].append(t_end)
+            temp_dict['gradient'].append(HT.df['gradient'].loc[i])
+            temp_dict['temp_diff'].append(HT.df['temp diff'].loc[i])
+            temp_dict['time_diff'].append(HT.df['time diff'].loc[i])
             temp_dict['주말여부'].append(HT.df['주말여부'].loc[i])
             temp_dict['요일'].append(to_day[d1.weekday()])
             t = d2 - d1
@@ -1359,7 +1374,8 @@ def model_heat_kang_ver_heat2(HT, df_mat, df_mat_heat, s_list, ss_list, s):
                 temp_dict['민감비고'].append('민감누락')
             else:
                 temp_dict['민감비고'].append('이상없음')
-            if flag_E == 1 or steel_type == 0:
+            # if flag_E == 1 or steel_type == 0:
+            if flag_E == 1:
                 temp_dict['에러발생'].append(1)
             else:
                 temp_dict['에러발생'].append(0)
