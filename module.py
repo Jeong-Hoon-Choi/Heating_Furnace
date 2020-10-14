@@ -247,8 +247,8 @@ def furnace_clustering2(model):
                             heat_flag = 1
                         if int(df.loc[i2, '민감소재장입개수']) > 0:
                             sense_flag = 1
-                        if df.loc[i2, '민감비고'] == '초민감' or df.loc[i2, '민감비고'] == '민감누락' or int(df.loc[i2, '에러발생']) == 1:
-                            flag_m = 1
+                        # if df.loc[i2, '민감비고'] == '초민감' or df.loc[i2, '민감비고'] == '민감누락' or int(df.loc[i2, '에러발생']) == 1:
+                        #     flag_m = 1
                         if int(df.loc[i2, '시간(총)']) <= 3600:
                             time_flag = 1
                         if clustering_condition(condition, heat_flag, flag_m, time_flag, sense_flag):
@@ -274,8 +274,8 @@ def furnace_clustering2(model):
                         #     heat_flag = 1
                         if int(df.loc[i2, '민감소재장입개수']) > 0:
                             sense_flag = 1
-                        if df.loc[i2, '민감비고'] == '초민감' or df.loc[i2, '민감비고'] == '민감누락' or int(df.loc[i2, '에러발생']) == 1:
-                            flag_m = 1
+                        # if df.loc[i2, '민감비고'] == '초민감' or df.loc[i2, '민감비고'] == '민감누락' or int(df.loc[i2, '에러발생']) == 1:
+                        #     flag_m = 1
                         if int(df.loc[i2, '시간(총)']) <= 3600:
                             time_flag = 1
                         if clustering_condition(condition, heat_flag, flag_m, time_flag, sense_flag):

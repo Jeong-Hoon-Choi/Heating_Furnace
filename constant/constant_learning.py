@@ -13,14 +13,18 @@ feature_0323_5 = ['장입중량총합', '장입최대중량', '장입소재개�
                   '시작온도', '종료온도', '시간(총)']
 feature_0323_6 = ['장입중량총합', '장입최대중량', '장입소재개수',
                   '시작온도', '종료온도', '시간(총)']
+feature_0323_7 = ['장입중량총합', '장입최대중량', '장입소재개수',
+                  '시작온도', '종료온도']
 feature_0323_6_2 = ['장입중량총합', '장입최대중량', '장입소재개수', '시작온도', '시간(총)']
 feature_list_0323_5 = [['에너지', feature_0323_5, None, '쉰시간포함']]
 feature_list_0323_6 = [['에너지', feature_0323_6, None, '쉰시간제외']]
 feature_list_0323_6_2 = [['에너지', feature_0323_6_2, None, '쉰시간제외']]
 feature_list_0323_6_3 = [['에너지', feature_0323_6, None, 'All']]
+feature_list_0323_6_4 = [['시간(총)', feature_0323_7, None, 'All']]
 feature_list_0325_3_1 = [feature_list_0323_5, feature_list_0323_6]    # Energy Increasing Part
 feature_list_0325_3_2 = [feature_list_0323_6_2]    # Energy Holding Part
 feature_list_0325_3_3 = [feature_list_0323_6_3]    # All features
+feature_list_0325_3_4 = [feature_list_0323_6_4]    # Time
 
 feature_0323_time_only = ['시간(총)']
 feature_list_0323_time_only = [['에너지', feature_0323_time_only, None, '시간(총)_only']]

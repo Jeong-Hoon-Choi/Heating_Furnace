@@ -1,9 +1,15 @@
-from tensorflow.keras import backend as K
 import tensorflow as tf
+from tensorflow import keras
 from tensorflow.keras import layers
-import numpy as np
 from tensorflow.keras.models import load_model
+from tensorflow.keras import backend as K
+from constant.constant_data_make import *
 import matplotlib.pyplot as plt
+import os
+import numpy as np
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 
 class FFN:
     def __init__(self, input_shape, train_feature, train_label, test_feature, test_label, epochs=2000, unit=30, hidden=5, save_path=None, load_path=None, check_seed=None):
@@ -21,27 +27,44 @@ class FFN:
         # self.fold = fold
 
     # model load
-    def load(self):
-        model = load_model(self.load_path)
+    def load(load_path, test_feature):
+        json_file = open(load_path + '.json', 'r')
+        loaded_model_json = json_file.read()
+        json_file.close()
+        model = tf.keras.models.model_from_json(loaded_model_json)
+        # load weights into new model
+        model.load_weights(load_path + ".h5")
+        # model = load_model(load_path)
         # score = model.evaluate(self.test_feature, self.test_label)
-        pred = model.predict(x=self.test_feature)
+        pred = model.predict(x=test_feature)
 
-        return pred
+        return pred[0][0]
 
     def run(self):
         model = self.init_model()
 
         if self.check_seed is not None:
             checkpoint = tf.keras.callbacks.ModelCheckpoint("./check/model checkpoint epoch2_" + str(self.check_seed) + "_{epoch:02d}.h5", monitor='loss',
-                                                            period=100)
+                                                            save_freq=100)
             csv_logger = tf.keras.callbacks.CSVLogger('./2_model_history.csv')
             callbacks = [csv_logger, checkpoint]
 
-        history = model.fit(self.train_feature, self.train_label,
-                  batch_size=np.size(a=self.train_feature, axis=0),
-                  epochs=self.epochs)
+        # self.train_feature = np.array(self.train_feature)
+        # self.train_label = np.array(self.train_label)
+        # self.test_feature = np.array(self.test_feature)
+        # self.test_label = np.array(self.test_label)
 
+        # history = model.fit(self.train_feature, self.train_label,
+        #           batch_size=np.size(a=self.train_feature, axis=0),
+        #           epochs=self.epochs, verbose=0)
+        history = model.fit(self.train_feature, self.train_label,
+                            batch_size=int(len(self.train_feature)/10),
+                            epochs=self.epochs, verbose=0)
+
+        score_train = model.evaluate(self.train_feature, self.train_label)
+        print('train score : ', score_train)
         score = model.evaluate(self.test_feature, self.test_label)
+        print('test score : ', score)
         y_pred = model.predict(x=self.test_feature)
 
 
@@ -54,17 +77,19 @@ class FFN:
 
         # save
         if self.save_path is not None:
-            tf.keras.models.save_model(model=model, filepath='model_' + self.save_path + '.h5')
+            # tf.keras.models.save_model(model=model, filepath=base_path + 'save_model/model_' + self.save_path + '.h5')
             model_json = model.to_json()
-            with open("model_" + self.save_path + ".json", 'w') as json_file:
+            with open(base_path + "save_model/model_" + self.save_path + ".json", 'w') as json_file:
                 json_file.write(model_json)
+            # serialize weights to HDF5
+            model.save_weights(base_path + 'save_model/model_' + self.save_path + '.h5')
         return score, y_pred, model
 
     def init_model(self):
         # 1) Initialize Sequential
         model = tf.keras.Sequential()
-        # 2) Add layer
 
+        # 2) Add layer
         model.add(layers.Dense(units=20, input_dim=self.input_shape))
         for i in range(1, self.hidden):
             model.add(layers.LeakyReLU())
@@ -75,8 +100,7 @@ class FFN:
 
 
         # 3) Initialize cost function, optimization algorithm, and metrics
-        model.compile(optimizer='adam',
-                      loss='mean_absolute_percentage_error')
+        model.compile(optimizer='adam', loss='mean_absolute_percentage_error')
         return model
 
     def accuracy(self, target, pred):
@@ -165,4 +189,3 @@ class FFN:
         # We add very small value by using K.epsilon() to prevent division by zero error
         precision = n_true_positive / (n_retrieved_data + K.epsilon())
         return precision
-

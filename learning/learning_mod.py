@@ -14,6 +14,7 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.neural_network import MLPRegressor
 from sklearn import ensemble
 from sklearn.tree import DecisionTreeRegressor
+from sklearn.linear_model import LinearRegression
 
 
 # MAPE
@@ -24,7 +25,7 @@ def mean_absolute_percentage_error(y_true, y_pred):
 
 # KNN
 def KNN_reg(train_feature, train_label, test_feature, test_label):
-    print(len(train_feature), len(test_feature), len(train_label), len(test_label))
+    print(len(train_feature), len(train_label), len(test_feature), len(test_label))
     # KNN
     k_range = np.arange(5, int(len(train_feature)*4/5), 5)
     if k_range.size == 0:
@@ -44,20 +45,32 @@ def KNN_reg(train_feature, train_label, test_feature, test_label):
 
 
 # MLP
-def MLP(train_feature, train_label, test_feature, test_label, epoch=2000, unit=30, hidden=5, s=None, s3=0):
-    print(len(train_feature), len(test_feature), len(train_label), len(test_label))
+def MLP(train_feature, train_label, test_feature, test_label, epoch=2000, unit=30, hidden=5, save=None, s3=0):
+    print(len(train_feature), len(train_label), len(test_feature), len(test_label))
     # MLP
     model_F = FFN(train_feature.shape[1], train_feature, train_label, test_feature, test_label,
-                  epoch, unit, hidden, s, check_seed=s3)
+                  epoch, unit, hidden, save, check_seed=s3)
     score, test_pred, m = model_F.run()
     train_pred = m.predict(x=train_feature)
     return score, test_pred, train_pred, m
 
 
+# Linear Regression
+def linear_reg(train_feature, train_label, test_feature, test_label):
+    print(len(train_feature), len(train_label), len(test_feature), len(test_label))
+    my_scorer = make_scorer(mean_absolute_percentage_error, greater_is_better=False)
+    optimize = GridSearchCV(LinearRegression(), param_grid={}, scoring=my_scorer)
+    optimize.fit(train_feature, train_label)
+    # print("best : ", optimize.best_params_)
+    score_train = optimize.score(train_feature, train_label)
+    print("train score : ", score_train)
+    score = optimize.score(test_feature, test_label)
+    print("test score : ", score)
+    return optimize.predict(test_feature), optimize.predict(train_feature), optimize.best_params_
+
 # Decision Tree _ not used
 def decision_tree_reg(train_feature, train_label, test_feature, test_label):
-    print(len(train_feature), len(test_feature), len(train_label), len(test_label))
-
+    print(len(train_feature), len(train_label), len(test_feature), len(test_label))
     my_scorer = make_scorer(mean_absolute_percentage_error, greater_is_better=False)
     optimize = GridSearchCV(DecisionTreeRegressor(random_state=0), param_grid={}, scoring=my_scorer, cv=5)
     optimize.fit(train_feature, train_label)
@@ -145,15 +158,28 @@ def data_manipulate_normal3(x, y, label, list_feature1, list_feature2=None, seed
         x_label = x[list_label]
         y_feature = y[list_feature1]
         y_label = y[list_label]
-        std_scale_x = preprocessing.StandardScaler().fit(x_feature)
-        x_feature3 = std_scale_x.transform(x_feature)
-        y_feature3 = std_scale_x.transform(y_feature)
-        x_feature = pd.DataFrame(columns=[list_feature1])
-        y_feature = pd.DataFrame(columns=[list_feature1])
-        x_feature = x_feature.append(pd.DataFrame(data=x_feature3, columns=x_feature.columns))
-        x_feature = x_feature.reset_index(drop=True)
-        y_feature = y_feature.append(pd.DataFrame(data=y_feature3, columns=y_feature.columns))
-        y_feature = y_feature.reset_index(drop=True)
+
+        # Feature scaling
+        # std_scale_x = preprocessing.MinMaxScaler().fit(x_feature)
+        # x_feature3 = std_scale_x.transform(x_feature)
+        # y_feature3 = std_scale_x.transform(y_feature)
+        # x_feature = pd.DataFrame(columns=[list_feature1])
+        # y_feature = pd.DataFrame(columns=[list_feature1])
+        # x_feature = x_feature.append(pd.DataFrame(data=x_feature3, columns=x_feature.columns))
+        # x_feature = x_feature.reset_index(drop=True)
+        # y_feature = y_feature.append(pd.DataFrame(data=y_feature3, columns=y_feature.columns))
+        # y_feature = y_feature.reset_index(drop=True)
+
+        # Label scaling
+        # std_scale_x_label = preprocessing.MinMaxScaler().fit(x_label)
+        # x_label3 = std_scale_x_label.transform(x_label)
+        # y_label3 = std_scale_x_label.transform(y_label)
+        # x_label = pd.DataFrame(columns=[list_label])
+        # y_label = pd.DataFrame(columns=[list_label])
+        # x_label = x_label.append(pd.DataFrame(data=x_label3, columns=x_label.columns))
+        # x_label = x_label.reset_index(drop=True)
+        # y_label = y_label.append(pd.DataFrame(data=y_label3, columns=y_label.columns))
+        # y_label = y_label.reset_index(drop=True)
     else:
         print(list_feature1 + list_feature2)
         print(list_label)
