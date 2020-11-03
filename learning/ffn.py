@@ -54,12 +54,12 @@ class FFN:
         # self.test_feature = np.array(self.test_feature)
         # self.test_label = np.array(self.test_label)
 
-        # history = model.fit(self.train_feature, self.train_label,
-        #           batch_size=np.size(a=self.train_feature, axis=0),
-        #           epochs=self.epochs, verbose=0)
         history = model.fit(self.train_feature, self.train_label,
-                            batch_size=int(len(self.train_feature)/10),
-                            epochs=self.epochs, verbose=0)
+                  batch_size=np.size(a=self.train_feature, axis=0),
+                  epochs=self.epochs, verbose=1)
+        # history = model.fit(self.train_feature, self.train_label,
+        #                     batch_size=int(len(self.train_feature)/10),
+        #                     epochs=self.epochs, verbose=0)
 
         score_train = model.evaluate(self.train_feature, self.train_label)
         print('train score : ', score_train)

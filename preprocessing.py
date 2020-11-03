@@ -32,7 +32,7 @@ def add_time_to_material(s1, s2, s3):
                     dict_[col_name] = [df_material_temp.loc[index_, col_name]]
                 dict_['시작시간'] = [df_material_time.loc[j, '가열시작일시']]
                 df_temp = pd.DataFrame.from_dict(dict_)
-                df_match =pd.concat([df_match, df_temp])
+                df_match = pd.concat([df_match, df_temp])
                 df_match = df_match.reset_index(drop=True)
     print("done")
     df_match.to_csv(s3, mode='w', encoding='euc-kr')

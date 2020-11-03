@@ -2,6 +2,7 @@ from module import *
 import pandas as pd
 import os
 import random
+from scipy.spatial import distance
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -349,12 +350,16 @@ def HF_learning(model, save_model=False):
     elif model == 'time':
         print('time')
         feature_list = feature_list_0325_3_4
+    elif model == 'start-temperature':
+        print('start-temperature')
+        feature_list = feature_list_0325_3_5
     else:
         print('wrong model')
         exit(0)
 
     epoch = 20000
     seed_start = random.randint(1, 10000)
+    # seed_start = 1
     seed_end = seed_start + 1
 
     for i2 in path_1:
@@ -398,8 +403,6 @@ def HF_learning(model, save_model=False):
                                 j[1] = ['시간(총)']
                                 j[3] = '시간(총)'
                         if model == 'time':
-                            # j[1] = ['시작온도', '종료온도']
-                            # j[3] = '시작온도_종료온도'
                             if i == [1]:
                                 j[1] = ['장입중량총합', '시작온도', '종료온도']
                                 j[3] = '장입중량총합_시작온도_종료온도'
@@ -421,7 +424,6 @@ def HF_learning(model, save_model=False):
                             elif i == [13] or i == [17]:
                                 j[1] = ['장입중량총합', '장입소재개수', '시작온도']
                                 j[3] = '장입중량총합_장입소재개수_시작온도'
-
 
                         train_feature, train_label, test_feature, test_label = \
                             data_manipulate_normal3(x, y, j[0], j[1], j[2], seed1)
@@ -463,6 +465,17 @@ def HF_learning(model, save_model=False):
                                 layer.append([3, 3])
                         if model == 'time':
                             layer.append([5, 5])
+                        if model == 'start-temperature':
+                            if i == [1] or i == [5]:
+                                layer.append([1, 3])
+                            elif i == [3] or i == [13]:
+                                layer.append([3, 1])
+                            elif i == [4] or i == [17] or i == [20]:
+                                layer.append([3, 3])
+                            elif i == [2]:
+                                layer.append([3, 5])
+                            else:
+                                layer.append([5, 5])
 
                         save_loc = None
                         if save_model:
@@ -481,29 +494,23 @@ def HF_learning(model, save_model=False):
                             df_complete.loc[seed1 - seed_start, str(i) + '_' + j[3] + '_MLP_' + str(hidden) + '_' + str(unit) + '_' + j[0]] \
                                 = out[len(out) - 1]
 
+                        # KNN
+                        knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature, train_label, test_feature, test_label)
+                        out2.append(mean_absolute_percentage_error(test_label, knn_test_pred))
+                        df_new.loc[seed1 - seed_start, j[3] + '_KNN_' + j[0]] = out2[len(out2) - 1]
+                        df_complete.loc[seed1 - seed_start, str(i) + '_' + j[3] + '_KNN_' + j[0]] = out2[len(out2) - 1]
+
                         # Linear Regression
                         # lr_test_pred, lr_train_pred, lrparam = linear_reg(train_feature, train_label, test_feature, test_label)
                         # out4.append(mean_absolute_percentage_error(test_label, lr_test_pred))
                         # df_new.loc[seed1 - seed_start, j[3] + '_LinReg_' + j[0]] = out4[len(out4) - 1]
                         # df_complete.loc[seed1 - seed_start, str(i) + '_' + j[3] + '_LinReg_' + j[0]] = out4[len(out4) - 1]
 
-                        # KNN
-                        # knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature, train_label, test_feature, test_label)
-                        # out2.append(mean_absolute_percentage_error(test_label, knn_test_pred))
-                        # df_new.loc[seed1 - seed_start, j[3] + '_KNN_' + j[0]] = out2[len(out2) - 1]
-                        # df_complete.loc[seed1 - seed_start, str(i) + '_' + j[3] + '_KNN_' + j[0]] = out2[len(out2) - 1]
-
-                        # print('path : ', i2, ' p_bum : ', i)
-                        # print('seed : ', seed1, ' feature_list : ', j2)
-
                         # Decision Tree
                         # decision_tree_test_pred, decision_tree_train_pred, dt1 = decision_tree_reg(train_feature, train_label, test_feature, test_label)
                         # out3.append(mean_absolute_percentage_error(test_label, decision_tree_test_pred))
                         # df_new.loc[seed1 - seed_start, j[3] + '_DT_' + j[0]] = out3[len(out3) - 1]
                         # df_complete.loc[seed1 - seed_start, str(i) + '_' + j[3] + '_DT_' + j[0]] = out3[len(out3) - 1]
-
-                        # df_new.loc[seed1 - seed_start, j[3] + '_DTREE_' + str(hidden) + '_' + str(unit) + '_' + j[0]] = \
-                        # out3[len(out3) - 1]
 
             for i0 in df_new.columns:
                 print(i0)
@@ -620,13 +627,16 @@ def wrapper_feature_selection(model):
     elif model == 'time':
         print('time')
         feature_list = feature_list_0325_3_4
+    elif model == 'start-temperature':
+        print('start-temperature')
+        feature_list = feature_list_0325_3_5
     else:
         print('wrong model')
         exit(0)
 
-    epoch = 20000
-    seed_start = 15
-    seed_end = 20
+    epoch = 5000
+    seed_start = random.randint(1, 10000)
+    seed_end = seed_start + 5
 
     for i2 in path_1:
         df_complete = pd.DataFrame()
@@ -649,18 +659,17 @@ def wrapper_feature_selection(model):
 
                         # Sequential Forward Selection(sfs) - MLP
                         my_scorer = make_scorer(mean_absolute_percentage_error, greater_is_better=False)
-                        if model == 'time':
+                        if model == 'time' or model == 'start-temperature':
                             sfs = SFS(MLPRegressor(hidden_layer_sizes=(5,), max_iter=epoch), k_features=(1, 5),
                                       forward=True, floating=False, scoring=my_scorer, cv=3)
-                            sfs.fit(train_feature, label)
                             sbs = SFS(MLPRegressor(hidden_layer_sizes=(5,), max_iter=epoch), k_features=(1, 5),
                                       forward=False, floating=False, scoring=my_scorer, cv=3)
                         else:
                             sfs = SFS(MLPRegressor(hidden_layer_sizes=(5, ), max_iter=epoch), k_features=(1, 6),
                                       forward=True, floating=False, scoring=my_scorer, cv=3)
-                            sfs.fit(train_feature, label)
                             sbs = SFS(MLPRegressor(hidden_layer_sizes=(5, ), max_iter=epoch), k_features=(1, 6),
                                       forward=False, floating=False, scoring=my_scorer, cv=3)
+                        sfs.fit(train_feature, label)
                         sbs.fit(train_feature, label)
                         feature_result_mlp_sfs = sfs.k_feature_names_
                         feature_result_mlp_sbs = sbs.k_feature_names_
@@ -675,43 +684,84 @@ def wrapper_feature_selection(model):
                             s1, mlp_test_pred, mlp_train_pred, data_model = \
                                 MLP(train_feature_sfs, train_label, test_feature_sfs, test_label,
                                     epoch=epoch, unit=unit, hidden=hidden)
-                            df_new.loc[seed1 - seed_start, 'forward'] \
-                                = str(list(feature_result_mlp_sfs))
-                            df_new.loc[seed1 - seed_start, 'f_' + j[3] + '_MLP_' + str(hidden) + '_' + str(unit) + '_' + j[0]] \
-                                = s1
-                            df_complete.loc[seed1 - seed_start, str(i) + '_forward'] \
-                                = str(list(feature_result_mlp_sfs))
-                            df_complete.loc[seed1 - seed_start, str(i) + '_f_' + j[3] + '_MLP_' + str(hidden) + '_' + str(unit) + '_' + j[0]] \
-                                = s1
+                            df_new.loc[seed1 - seed_start, 'MLP_forward'] = str(list(feature_result_mlp_sfs))
+                            df_new.loc[seed1 - seed_start, 'f_' + j[3] + '_MLP_' + str(hidden) + '_' + str(unit) +
+                                       '_' + j[0]] = s1
+                            df_complete.loc[seed1 - seed_start, str(i) + '_MLP_forward'] = str(list(feature_result_mlp_sfs))
+                            df_complete.loc[seed1 - seed_start, str(i) + '_f_' + j[3] + '_MLP_' + str(hidden) + '_' +
+                                            str(unit) + '_' + j[0]] = s1
 
                             s1, mlp_test_pred, mlp_train_pred, data_model = \
                                 MLP(train_feature_sbs, train_label, test_feature_sbs, test_label,
                                     epoch=epoch, unit=unit, hidden=hidden)
-                            df_new.loc[seed1 - seed_start, 'backward'] \
-                                = str(list(feature_result_mlp_sbs))
-                            df_new.loc[seed1 - seed_start, 'b_' + j[3] + '_MLP_' + str(hidden) + '_' + str(unit) + '_' + j[0]] \
-                                = s1
-                            df_complete.loc[seed1 - seed_start, str(i) + '_backward'] \
-                                = str(list(feature_result_mlp_sbs))
-                            df_complete.loc[seed1 - seed_start, str(i) + '_b_' + j[3] + '_MLP_' + str(hidden) + '_' + str(unit) + '_' + j[0]] \
-                                = s1
+                            df_new.loc[seed1 - seed_start, 'MLP_backward'] = str(list(feature_result_mlp_sbs))
+                            df_new.loc[seed1 - seed_start, 'b_' + j[3] + '_MLP_' + str(hidden) + '_' + str(unit) +
+                                       '_' + j[0]] = s1
+                            df_complete.loc[seed1 - seed_start, str(i) + '_MLP_backward'] = str(list(feature_result_mlp_sbs))
+                            df_complete.loc[seed1 - seed_start, str(i) + '_b_' + j[3] + '_MLP_' + str(hidden) + '_' +
+                                            str(unit) + '_' + j[0]] = s1
 
-                        # # Sequential Forward Selection(sfs) - KNN
-                        # my_scorer = make_scorer(mean_absolute_percentage_error, greater_is_better=False)
-                        # sfs = SFS(KNeighborsRegressor(weights='distance'), k_features=(1, 6),
-                        #           forward=True, floating=False, scoring=my_scorer, cv=5)
-                        # sfs.fit(feature, label)
-                        # feature_result_knn = sfs.k_feature_names_
-                        #
-                        # train_feature, train_label, test_feature, test_label = \
-                        #     data_manipulate_normal3(x, y, j[0], list(feature_result_knn), None, 0)
-                        # print(train_feature)
-                        # train_label = train_label.reset_index(drop=True)
-                        # test_label = test_label.reset_index(drop=True)
-                        #
-                        # # KNN
-                        # knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature, train_label, test_feature, test_label)
-                        # result = mean_absolute_percentage_error(test_label, knn_test_pred)
+                        # Sequential Forward Selection(sfs) - KNN
+                        my_scorer = make_scorer(mean_absolute_percentage_error, greater_is_better=False)
+                        sfs = SFS(KNeighborsRegressor(weights='distance'), k_features=(1, 5),
+                                  forward=True, floating=False, scoring=my_scorer, cv=5)
+                        sbs = SFS(KNeighborsRegressor(weights='distance'), k_features=(1, 5),
+                                  forward=False, floating=False, scoring=my_scorer, cv=5)
+                        sfs.fit(train_feature, label)
+                        sbs.fit(train_feature, label)
+                        feature_result_knn_sfs = sfs.k_feature_names_
+                        feature_result_knn_sbs = sbs.k_feature_names_
+
+                        train_feature_sfs = train_feature[list(feature_result_knn_sfs)]
+                        test_feature_sfs = test_feature[list(feature_result_knn_sfs)]
+                        train_feature_sbs = train_feature[list(feature_result_knn_sbs)]
+                        test_feature_sbs = test_feature[list(feature_result_knn_sbs)]
+
+                        # KNN
+                        knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature_sfs, train_label, test_feature_sfs, test_label)
+                        result = mean_absolute_percentage_error(test_label, knn_test_pred)
+                        df_new.loc[seed1 - seed_start, 'KNN_forward'] = str(list(feature_result_knn_sfs))
+                        df_new.loc[seed1 - seed_start, 'f_' + j[3] + '_KNN_' + j[0]] = result
+                        df_complete.loc[seed1 - seed_start, str(i) + '_KNN_forward'] = str(list(feature_result_knn_sfs))
+                        df_complete.loc[seed1 - seed_start, str(i) + '_f_' + j[3] + '_KNN_' + j[0]] = result
+
+                        knn_test_pred, knn_train_pred, k1 = KNN_reg(train_feature_sbs, train_label, test_feature_sbs, test_label)
+                        result = mean_absolute_percentage_error(test_label, knn_test_pred)
+                        df_new.loc[seed1 - seed_start, 'KNN_backward'] = str(list(feature_result_knn_sbs))
+                        df_new.loc[seed1 - seed_start, 'b_' + j[3] + '_KNN_' + j[0]] = result
+                        df_complete.loc[seed1 - seed_start, str(i) + '_KNN_backward'] = str(list(feature_result_knn_sbs))
+                        df_complete.loc[seed1 - seed_start, str(i) + '_b_' + j[3] + '_KNN_' + j[0]] = result
+
+                        # Sequential Forward Selection(sfs) - Linear Regression
+                        my_scorer = make_scorer(mean_absolute_percentage_error, greater_is_better=False)
+                        sfs = SFS(LinearRegression(), k_features=(1, 5),
+                                  forward=True, floating=False, scoring=my_scorer, cv=5)
+                        sbs = SFS(LinearRegression(), k_features=(1, 5),
+                                  forward=False, floating=False, scoring=my_scorer, cv=5)
+                        sfs.fit(train_feature, label)
+                        sbs.fit(train_feature, label)
+                        feature_result_lr_sfs = sfs.k_feature_names_
+                        feature_result_lr_sbs = sbs.k_feature_names_
+
+                        train_feature_sfs = train_feature[list(feature_result_lr_sfs)]
+                        test_feature_sfs = test_feature[list(feature_result_lr_sfs)]
+                        train_feature_sbs = train_feature[list(feature_result_lr_sbs)]
+                        test_feature_sbs = test_feature[list(feature_result_lr_sbs)]
+
+                        # Linear Regression
+                        lr_test_pred, lr_train_pred, lrparam = linear_reg(train_feature_sfs, train_label, test_feature_sfs, test_label)
+                        result = mean_absolute_percentage_error(test_label, lr_test_pred)
+                        df_new.loc[seed1 - seed_start, 'LinReg_forward'] = str(list(feature_result_lr_sfs))
+                        df_new.loc[seed1 - seed_start, 'f_' + j[3] + '_LinReg_' + j[0]] = result
+                        df_complete.loc[seed1 - seed_start, str(i) + '_LinReg_forward'] = str(list(feature_result_lr_sfs))
+                        df_complete.loc[seed1 - seed_start, str(i) + '_f_' + j[3] + '_LinReg_' + j[0]] = result
+
+                        lr_test_pred, lr_train_pred, lrparam = linear_reg(train_feature_sbs, train_label, test_feature_sbs, test_label)
+                        result = mean_absolute_percentage_error(test_label, lr_test_pred)
+                        df_new.loc[seed1 - seed_start, 'LinReg_backward'] = str(list(feature_result_lr_sbs))
+                        df_new.loc[seed1 - seed_start, 'b_' + j[3] + '_LinReg_' + j[0]] = result
+                        df_complete.loc[seed1 - seed_start, str(i) + '_LinReg_backward'] = str(list(feature_result_lr_sbs))
+                        df_complete.loc[seed1 - seed_start, str(i) + '_b_' + j[3] + '_LinReg_' + j[0]] = result
 
             for i0 in df_new.columns:
                 print(i0)
@@ -745,6 +795,9 @@ def make_rule(model):
             df_origin = pd.read_csv(base_path + 'analysis/for_learning_' + str(model) + '/' + str(i2[0]) +
                                     '/' + str(i) + '.csv', encoding='euc-kr', index_col=0)
             df_origin['velocity'] = ''
+            df_origin['constant'] = ''
+            df_origin['prediction'] = ''
+            df_origin['error'] = ''
             for a, row in df_origin.iterrows():
                 start = df_origin['시작온도'].loc[a]
                 end = df_origin['종료온도'].loc[a]
@@ -760,7 +813,7 @@ def make_rule(model):
             temp_start = []
             temp_end = []
             temp_velocity = []
-            tolerance = 150
+            tolerance = 50
             for j, row in df_origin.iterrows():
                 if flag_start == None:
                     flag_start = df_origin['시작온도'].loc[j]
@@ -791,7 +844,7 @@ def make_rule(model):
                         temp_velocity.append(df_origin['velocity'].loc[j])
             df_result = df_result.append(pd.DataFrame(data=np.array([[np.mean(temp_start), np.mean(temp_end), np.mean(temp_velocity), len(temp_velocity)]]), columns=['시작온도', '종료온도', 'constant', 'count']))
             df_result = df_result.reset_index(drop=True)
-            df_result.to_csv(base_path + 'model_result/model_result_' + str(model) + '/' + str(i2[0]) + '/result_' + str(i) + '1.csv', encoding='euc-kr')
+            df_result.to_csv(base_path + 'model_result/model_result_' + str(model) + '/' + str(i2[0]) + '/model_' + str(model) + '_' + str(i[0]) + '.csv', encoding='euc-kr')
 
             # data check
             print('original data :', len(df_origin))
@@ -799,6 +852,39 @@ def make_rule(model):
             for l, row in df_result.iterrows():
                 count += df_result['count'].loc[l]
             print('result data :', int(count))
+
+            df_origin['mape'] = ''
+            for k, row in df_origin.iterrows():
+                start = df_origin['시작온도'].loc[k]
+                end = df_origin['종료온도'].loc[k]
+                diff = abs(end - start)
+                constant = None
+                flag_diff = 1000
+                for n, bar in df_result.iterrows():
+                    res_start = df_result['시작온도'].loc[n]
+                    res_end = df_result['종료온도'].loc[n]
+                    euc_one = (start, end)
+                    euc_two = (res_start, res_end)
+                    cur_diff = distance.euclidean(euc_one, euc_two)
+                    if cur_diff < flag_diff:
+                        flag_diff = cur_diff
+                        constant = df_result['constant'].loc[n]
+                true_time = df_origin['시간(총)'].loc[k]
+                prediction = diff / constant
+                df_origin['constant'].loc[k] = constant
+                df_origin['prediction'].loc[k] = prediction
+                df_origin['error'].loc[k] = abs(true_time - prediction)
+                df_origin['mape'].loc[k] = abs(true_time - prediction) / true_time * 100
+            df_origin = df_origin.reset_index(drop=True)
+            df_origin = df_origin[['시작온도', '종료온도', '시간(총)', 'velocity', 'constant', 'prediction', 'error', 'mape']]
+            for i0 in df_origin.columns:
+                if i0 == 'mape':
+                    arr_avg = []
+                    for i01, ro2 in df_origin.iterrows():
+                        arr_avg.append(float(df_origin.loc[i01, i0]))
+                    # print(arr_avg)
+                    df_origin.loc[len(df_origin), i0] = np.average(arr_avg)
+            df_origin.to_csv(base_path + 'model_result/model_result_' + str(model) + '/' + str(i2[0]) + '/model_result_' + str(i[0]) + '.csv', encoding='euc-kr')
             print('end -', i, '\n')
 
 
@@ -815,7 +901,7 @@ if __name__ == '__main__':
     # 0 = all, 1 = heating curve type 1, 3 = heating curve type 2, 5 = heating curve type 3, 10 = strange heating curve
     # work_set2(curve_type=0)
 
-    model = 'energy-increasing'   # energy-increasing, energy-holding, time
+    model = 'start-temperature'   # energy-increasing, energy-holding, time, start-temperature
     # model = 'time'
 
     # make_heat_or_hold(model=model)

@@ -9,11 +9,11 @@ if __name__ == '__main__':
     # furnace_clustering()
     # HF_heating_module()
 
-    model = 'energy-holding'  # energy-increasing, energy-holding, time
+    model = 'start-temperature'  # energy-increasing, energy-holding, time, start-temperature
 
     # make_heat_or_hold(model=model)
-    furnace_clustering2(model=model)
-    # HF_learning(model=model)
+    # furnace_clustering2(model=model)
+    HF_learning(model=model)
 
     # wrapper_feature_selection(model=model)
 

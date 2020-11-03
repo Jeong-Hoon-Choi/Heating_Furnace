@@ -207,6 +207,17 @@ class HF:
                 self.df['주/야간'].loc[i] = self.df['주/야간'].loc[i - 1]
         self.df['소재 list'] = self.df['소재 list'].fillna('[]')
 
+    def fill_prev_end_temp(self):
+        self.df['이전 종료온도'] = None
+        self.df['이전 종료온도'] = self.df['이전 종료온도'].fillna(np.NaN)
+        prev_end_temp = None
+        for i, row in self.df.iterrows():
+            if prev_end_temp == None and self.df.loc[i, 'Type'] == 'heat':
+                prev_end_temp = self.df.loc[i, '종료온도']
+            elif self.df.loc[i, 'Type'] == 'heat':
+                self.df['이전 종료온도'].loc[i] = prev_end_temp
+                prev_end_temp = self.df.loc[i, '종료온도']
+
     def set_cycle(self):
         count_c = 0
         for i in range(len(self.df.index)):

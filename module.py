@@ -6,6 +6,7 @@ from learning.learning_mod import *
 from constant.constant_data_make import *
 from bases import plotting
 import matplotlib.pyplot as plt
+import os
 from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 
 
@@ -25,7 +26,7 @@ def work_start(view):
         plotting(data, change_point, time_dict['fixed_start_time_list'], time_dict['fixed_end_time_list'], num,
                  time_dict['heat_ended_time_list'], time_dict['real_start_time_list'], time_dict['real_end_time_list'], view)
         make_database(data, num, h, phase_list_dict)
-        h.sett(df_mat, base_path + 'HF_OUT/test_2019_a_')
+        h.sett(df_mat, base_path + 'HF_OUT/test_2020_')
         print('DB_Done')
 
 
@@ -41,7 +42,7 @@ def work_press():
         h_arr.append(h)
     pm.matching_press_general(h_arr, p)
     for i in h_arr:
-        i.out(base_path + 'HF_OUT/press_2019_1a_')
+        i.out(base_path + 'HF_OUT/press_2020_')
 
 
 # 구간 정리
@@ -51,16 +52,19 @@ def work_set():
     # for num in error_arr_2019:
     for num in work_:
         h = HF()
-        h.df = pd.read_csv(base_path + 'HF_OUT/press_2019_1a_' + str(num) + '.csv', encoding='euc-kr', index_col=0)
+        h.df = pd.read_csv(base_path + 'HF_OUT/test_2020_' + str(num) + '.csv', encoding='euc-kr', index_col=0)
         h.match_time(df_t)
-        print('end time matching')
+        print(str(num), '- end time matching')
         h.fill()
-        print('end fill items')
+        print(str(num), '- end fill items')
+        h.fill_prev_end_temp()
+        print(str(num), '- end fill prev end temp')
         h.week()
         hh.df = pd.concat([hh.df, h.df])
         hh.df = hh.df.reset_index(drop=True)
-    eliminate_drop(hh)
-    hh.out(base_path + 'HF_OUT/last_2019_ffa')
+    eliminate_drop(hh)  # eliminate error drop_flag loop
+    eliminate_no_material_list(hh)  # eliminate no material list Loop
+    hh.out(base_path + 'HF_OUT/last_test_2020_ffa')
     print('phase 2')
     hhh = ['heat', 'hold', 'open', 'reheat']
     for i in hhh:
@@ -73,11 +77,11 @@ def work_set():
                 pass
         h2.df = h2.df.reset_index(drop=True)
         gum_2(h2)
-        h2.df.to_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_' + i + '.csv', encoding='euc-kr')
-    hh2 = HF()
-    hh2.df = pd.read_csv(base_path + 'HF_OUT/last_2019_ffa' + str(work_[0]) + '.csv', encoding='euc-kr', index_col=0)
-    handle_first_hold(hh2, work_, base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_first_hold.csv')
-    hh2.out(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_drop_first_hold')
+        h2.df.to_csv(base_path + 'HF_OUT/last_test_2020_' + str(work_[0]) + '_' + i + '.csv', encoding='euc-kr')
+    # hh2 = HF()
+    # hh2.df = pd.read_csv(base_path + 'HF_OUT/last_test_2020_ffa' + str(work_[0]) + '.csv', encoding='euc-kr', index_col=0)
+    # handle_first_hold(hh2, work_, base_path + 'HF_OUT/last_test_2020_' + str(work_[0]) + '_first_hold.csv')
+    # hh2.out(base_path + 'HF_OUT/last_test_2020_' + str(work_[0]) + '_drop_first_hold')
 
 
 # 가열구간 모델용 데이터 만들기
@@ -85,9 +89,10 @@ def make_heat():
     s_list, ss_list = sensitive_()
     df_mat_heat = pd.read_csv(base_path + 'data/heat_steel_par.csv', encoding='euc-kr')
     HT_heat = HF()
-    HT_heat.df = pd.read_csv(base_path + 'HF_OUT/last_2019_' + str(work_[0]) + '_heat.csv', encoding='euc-kr', index_col=0)
+    HT_heat.df = pd.read_csv(base_path + 'HF_OUT/last_test_2020_' + str(work_[0]) + '_heat.csv', encoding='euc-kr', index_col=0)
     HT_heat.df = HT_heat.df.reset_index(drop=True)
     HT_heat.change_list2()
+
     model_heat_kang_ver_heat(HT_heat, df_mat, df_mat_heat, s_list, ss_list,
                              base_path + '/model/model_' + str(work_[0]) + '.csv')
 
@@ -231,7 +236,7 @@ def furnace_clustering():
 
 def furnace_clustering2(model):
     df = pd.read_csv(base_path + 'model/model_1_' + model + '.csv', encoding='euc-kr', index_col=0)
-    if model == 'energy-increasing' or model == 'time':
+    if model == 'energy-increasing' or model == 'time' or model == 'start-temperature':
         for condition in clustering_condition_constant:
             for i in p_bum:
                 df_t = pd.DataFrame(columns=df.columns)
